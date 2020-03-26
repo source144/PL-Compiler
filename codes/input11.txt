@@ -1,0 +1,18 @@
+var x,/* /** */ y;
+/* this is a comment and should be ignored */
+const a = 5;
+begin /* this is a multi-line
+comment
+and it's very cool
+*/
+	y/*y=3 boiizz!///54213*/ := 3;
+	x/* aa*a*a*/ := y + 66;
+	write y;
+	write x;
+	/* write a; */
+	write a;
+
+	x := x + a * 2;
+
+	write x;
+end.

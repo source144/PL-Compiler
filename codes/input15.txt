@@ -1,0 +1,11 @@
+var x, y;
+const a = 1, b = 2, c = 3;
+begin
+	y := 3;
+	x := y + 56;
+	write y;
+	write x;
+	/* 1 + 2 + 3 + 3 + 3 + a = 13 */
+	x := a + b + c + c + c + a;
+	write x;
+end.

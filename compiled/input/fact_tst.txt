@@ -1,0 +1,25 @@
+7 0 0 18	# jump to MAIN
+6 0 0 6		# RV SL DL RA n 1 n<=1
+3 0 1 5		# REG[0] = n 	=> caller's param n
+4 0 0 4		# stack[4] = n	=> caller's param n
+14 2 0 1	# REG[2] = REG[0] - REG[1] => n - 1
+22 3 0 1	# REG[3] = REG[0] <= REG[1]
+4 2 0 5		# local n - 1	=> stack[5] = REG[2] => n - 1
+4 3 0 6		# local	n<=1	=> stack[6] = REG[3] = n <= 1
+8 0 0 16	# if stack[6]
+3 0 0 4		# REG[0] = n
+5 0 0 2		# fact(n - 1)
+3 2 0 7		# REG[2] = fact(n - 1)
+15 0 0 2	# REG[0] = REG[0] * REG[2] = n * fact(n - 1)
+4 0 0 0		# RV -> stack[0] = n * fact(n - 1);
+2 0 0 0		# return!
+4 1 0 0		# RV -> stack[0] = 1
+2 0 0 0		# return!
+6 0 0 6		# Reserve 6 in main
+1 0 0 3		# REG[0] = 3
+1 1 0 1		# REG[1] = 1
+4 0 0 5		# pass as param => stack[5] = REG[0] (=3)
+5 0 0 2		# call factorial
+3 0 0 7		# REG[0] = fact(n)
+9 0 0 1		# print(REG[0])
+11 0 0 3	# halt

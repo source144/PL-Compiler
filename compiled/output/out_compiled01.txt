@@ -1,0 +1,73 @@
+Line   OP   R  L  M
+0      JMP  0  0  1  
+1      INC  0  0  6  
+2      SIO  0  0  0  
+3      STO  0  0  5  
+4      LIT  0  0  4  
+5      STO  0  0  4  
+6      LOD  0  0  5  
+7      LOD  1  0  4  
+8      GTR  0  0  1  
+9      JPC  0  0  14 
+10     LOD  0  0  5  
+11     LIT  1  0  5  
+12     ADD  0  0  1  
+13     STO  0  0  5  
+14     LOD  0  0  5  
+15     SIO  0  0  0  
+16     LOD  0  0  4  
+17     SIO  0  0  0  
+18     SIO  0  0  3  
+                      PC   BP    SP    REGISTERS
+Initial values        0     1     0    0  0  0  0  0  0  0  0
+Stack: 
+
+0    JMP  0  0  1     1     1     0    0  0  0  0  0  0  0  0
+Stack: 
+
+1    INC  0  0  6     2     1     6    0  0  0  0  0  0  0  0
+Stack: 0  0  0  0  0  0
+
+2    SIO  0  0  0     3     1     6    3  0  0  0  0  0  0  0
+Stack: 0  0  0  0  0  0
+
+3    STO  0  0  5     4     1     6    3  0  0  0  0  0  0  0
+Stack: 0  0  0  0  0  3
+
+4    LIT  0  0  4     5     1     6    4  0  0  0  0  0  0  0
+Stack: 0  0  0  0  0  3
+
+5    STO  0  0  4     6     1     6    4  0  0  0  0  0  0  0
+Stack: 0  0  0  0  4  3
+
+6    LOD  0  0  5     7     1     6    3  0  0  0  0  0  0  0
+Stack: 0  0  0  0  4  3
+
+7    LOD  1  0  4     8     1     6    3  4  0  0  0  0  0  0
+Stack: 0  0  0  0  4  3
+
+8    GTR  0  0  1     9     1     6    0  4  0  0  0  0  0  0
+Stack: 0  0  0  0  4  3
+
+9    JPC  0  0  14    14    1     6    0  4  0  0  0  0  0  0
+Stack: 0  0  0  0  4  3
+
+14   LOD  0  0  5     15    1     6    3  4  0  0  0  0  0  0
+Stack: 0  0  0  0  4  3
+
+15   SIO  0  0  0     16    1     6    3  4  0  0  0  0  0  0
+Stack: 0  0  0  0  4  3
+
+PM/0 VM: 3
+
+16   LOD  0  0  4     17    1     6    4  4  0  0  0  0  0  0
+Stack: 0  0  0  0  4  3
+
+17   SIO  0  0  0     18    1     6    4  4  0  0  0  0  0  0
+Stack: 0  0  0  0  4  3
+
+PM/0 VM: 4
+
+18   SIO  0  0  3     19    1     6    4  4  0  0  0  0  0  0
+Stack: 0  0  0  0  4  3
+

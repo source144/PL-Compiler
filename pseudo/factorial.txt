@@ -1,0 +1,93 @@
+Line   OP   R  L  M
+0      JMP  0  0  25  
+1      JMP  0  0  2 
+2      STO  0  0  4  
+3      LIT  0  0  4  
+4      STO  0  0  3  
+5      CAL  0  0  4  
+6      JMP  0  0  1 
+7      INC  0  0  3  
+8      LOD  0  1  4  
+9      LOD  1  1  4  
+10     MUL  1  0  4  
+11     STO  0  0  0  
+12     LIT  1  0  8  
+13     SUB  0  0  15  
+14     STO  0  1  1 
+15     NEQ  0  0  3 
+16     JPC  0  0  4 
+17     CAL  0  1  0  
+18     RTN  0  0  0  
+19     LOD  0  0  5  
+20     SIO  0  0  1  
+21     SIO  0  0  3
+
+
+stack[bp + 4] = n
+stack[bp + 5] = n - 1;
+
+REG[0] - n (STORE TO LOCAL/param)
+REG[1] - 1
+REG[2] - n - 1
+REG[3] - n <= 1
+
+jmp 0 0 M	# jump to MAIN
+# FACTORIAL
+inc 0 0	6	# RV SL DL RA n 1 n<=1
+# params
+lod 0 1 5	# REG[0] = n 	=> caller's param n
+sto 0 0 4	# stack[4] = n	=> caller's param n
+# set registers
+sub 2 0 1	# REG[2] = REG[0] - REG[1] => n - 1
+leq 3 0 1	# REG[3] = REG[0] <= REG[1]
+# set locals
+sto 2 0 5	# local n - 1	=> stack[5] = REG[2] => n - 1
+sto 3 0 6	# local	n<=1	=> stack[6] = REG[3] = n <= 1
+# if n<=1	goto RETURN 1
+jpc 0 0 R1	# if stack[6]
+# OTHERWISE return N * FACT(N - 1)
+lod 0 0 4	# REG[0] = n
+# recursive call
+cal 0 0 F	# fact(n - 1)
+lod 2 0 7	# REG[2] = fact(n - 1)
+mul 0 0 2	# REG[0] = REG[0] * REG[2] = n * fact(n - 1)
+sto 0 0 0	# RV -> stack[0] = n * fact(n - 1);
+rtn 0 0 0	# return!
+# RETURN 1
+sto 1 0 0	# RV -> stack[0] = 1
+rtn 0 0 0
+# MAIN
+inc 0 0 6	# Reserve 6 in main
+lit 0 0 3	# REG[0] = 3
+lit 1 0 1	# REG[1] = 1
+sto 0 0 5	# pass as param => stack[5] = REG[0] (=3)
+cal 0 0 F	# call factorial
+lod 0 0 7	# REG[0] = fact(n)
+sio 0 0 1	# print(REG[0])
+sio 0 0 3	# halt
+
+# otherwise:
+# RETURN N * FACT(N - 1)
+
+lod 0 0 4	# REG[0] = n
+lod 2 0 7	# REG[2] = fact(n - 1)
+mul 0 0 2	# REG[0] = REG[0] * REG[2] = n * fact(n - 1)
+sto 0 0 0	# RV -> stack[0] = n * fact(n - 1);
+rtn 0 0 0	# return!
+
+# set REG[0] = n
+# set REG[2] = fact(n - 1)
+# set REG[0] = REG[0] * REG[1]
+# set RV -> stack[7] = REG[0]
+rtn 0 0 0
+
+# R1 - return 1
+
+sto 1 0 0	# stack[0] = 1
+RTN 0 0 0
+
+sto 1 0 5	# local tmp = 1
+
+
+
+cal 0 2		# fact

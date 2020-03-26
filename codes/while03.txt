@@ -1,0 +1,20 @@
+var i, n, factorial, err;
+begin
+	read n;
+
+	factorial := n;
+	i := n - 1;
+	err := -1;
+
+	if n > 0 then
+	begin
+		while i > 1 do 
+		begin
+			factorial := i * factorial;
+			i := i - 1;
+			write i;
+		end;
+		write factorial;
+	end;
+	if n <= 0 then write err;
+end.

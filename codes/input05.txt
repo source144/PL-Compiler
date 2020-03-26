@@ -1,0 +1,11 @@
+var x, y;
+/* this is a comment and should be ignored */
+begin /* this is a multi-line
+comment
+and it's very cool
+*/
+	y := 3;
+	x := y + 56;
+	write y;
+	write x;
+end.

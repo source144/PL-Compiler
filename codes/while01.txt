@@ -1,0 +1,7 @@
+var i;
+const n = 20;
+begin
+	i := 0;
+	while i < n do i := i + 1;
+	write i;
+end.
