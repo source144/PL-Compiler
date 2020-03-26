@@ -510,11 +510,41 @@ void process(string_t *content, list_t *leximsList)
 		else if (isValidSymbol(content->charAt[i]))
 			addSymbol(leximsList, ln, col, lineIdx, readSymbol(content, &i, &ln, &col, &lineIdx));
 		
-		// Handle line and column number
-		else if (content->charAt[i] == '\n')
+		// Handle invalid symbols
+		else
 		{
-			newLine(&ln, &col);
-			lineIdx = i + 1;
+			// Spaces for nice formatting
+			// (NOTE: 8 chars by default: LINE X, X: *col* ^ )
+			// LINE 5, 5:  x = y + 56;
+			int k, j, numSpaces = 8 + numDigits(ln) + numDigits(col) + col;
+
+			// Source code line with error, and spaces for nice formatting (+1 for NUL terminator)
+			char line[__content->length - i + 1], indicator[numSpaces + 1];
+
+			// Set line and space buffer
+			for (i = k = lineIdx; i < __content->length && __content->charAt[i] && __content->charAt[i] != '\n'; i++)
+			{
+				j = i - k;
+				// Every white space is going to be a simple space
+				if (isspace(__content->charAt[i]))
+					line[j] = ' ';
+				else line[j] = __content->charAt[i];
+
+				if (j < numSpaces)
+					indicator[j] = ' ';
+			}
+			line[j + 1] = '\0'; // Terminate
+
+			// Continue filling spaces buffer if needed
+			for (; j < numSpaces; j++)
+				indicator[j] = ' ';
+
+			// The indicator (^) itself and termination
+			indicator[numSpaces] = '^';
+			indicator[numSpaces + 1] = '\0';
+
+			// Specific message
+			DIE("SCANNER INTERRUPTED - Invalid Symbol\nLINE %d, %d: %s\n%s", ln, col, line, indicator);
 		}
 	}
 }
@@ -524,10 +554,12 @@ void process(string_t *content, list_t *leximsList)
 // Parser Error
 void error(node_t *token, char *msg, int e)
 {
-	// Specific message
-	if (msg)
-		DIE("INTERRUPTED - %s", msg);
-
+	if (!token)
+	{
+		if (msg)	DIE("INTERRUPTED - %s", msg);
+		else		DIE("INTERRUPTED - Unexpected Error (%d)", e);
+	}
+	
 	// Spaces for nice formatting
 	// (NOTE: 8 chars by default: LINE X, X: *col* ^ )
 	// LINE 5, 5:  x = y + 56;
@@ -557,6 +589,10 @@ void error(node_t *token, char *msg, int e)
 	// The indicator (^) itself and termination
 	indicator[numSpaces] = '^';
 	indicator[numSpaces + 1] = '\0';
+
+	// Specific message
+	if (msg)
+		DIE("INTERRUPTED - %s\nLINE %d, %d: %s\n%s", msg, token->__line, token->__col, line, indicator);
 
 	// Generic error
 	switch (e)
@@ -895,6 +931,12 @@ node_t *statement(int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *t
 			// Output contents of register 0
 			emitCode(codeIdx, OP_OUT, 0, 0, 0, code);
 			break;
+
+		case semicolonsym:
+			break;
+
+		default:
+			error(token, "Unexpected token", -1);
 	}
 	return nextToken(token);
 }
