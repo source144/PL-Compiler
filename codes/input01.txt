@@ -1,17 +1,11 @@
 var i, n, factorial, err;
+const a = 4;
+const b = 5;
+/* const g = 5 + 6; */
 begin
-	read n;
-
-	factorial := n;
-	i := n - 1;
-	err := 99;
-
-	if n < 1 then write err;
-
-	while i > 1 do 
-	begin
-		factorial := i * factorial;
-		i := i - 1;
-	end;
-	write factorial;
-end.
+	i := -1;
+	if a <> b then i := a + b;
+	write i; 					/* Expected: 9 */
+	i := (2 * 2) * (2 * 2 + 2);
+	write i;					/* Expected: 24 */
+end

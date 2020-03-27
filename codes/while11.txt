@@ -1,0 +1,17 @@
+var i;
+const n = 4;
+begin
+	i := n * 2;
+	while i <= n do 
+	begin
+		i := i - 1;
+		write i;
+	end;
+
+	while i < n * 3 do
+	begin
+		i := i + 1;
+		write i;
+	end;
+	write i;
+end.

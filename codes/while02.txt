@@ -2,7 +2,8 @@ var i;
 const n = 20;
 begin
 	i := 0;
-	while i < n do 
+
+	while i < n do
 	begin
 		i := i + 1;
 		write i;

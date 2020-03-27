@@ -12,6 +12,9 @@ and it's very cool
 	/* write a; */
 	write a;
 
+	/* 69 + 5 * 2 */
+	/* 69 + 10 */
+	/* 79 */
 	x := x + a * 2;
 
 	write x;

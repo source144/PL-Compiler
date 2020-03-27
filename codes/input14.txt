@@ -5,6 +5,10 @@ begin
 	x := y + 56;
 	write y;
 	write x;
+
+	/* 1 + 2 + 3 */
+	/* 1 + 5 */
+	/* 6 */
 	x := a + b + c;
 	write x;
 end.

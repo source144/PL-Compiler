@@ -5,7 +5,7 @@ comment
 and it's very cool
 */
 	y/*y=3 boiizz!///54213*/ := 3;
-	x/* aa*a*a*/ = y + 66;
+	x/* aa*a*a*/ := y + 66;
 	write y;
 	write x;
 end.
