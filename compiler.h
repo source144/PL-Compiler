@@ -122,8 +122,8 @@ int isValidSymbol(char c);
 void newLine(int *ln, int *col);
 
 // Scanner Methods
-string_t *readIdentifier(string_t *content, int *idx, int *col);
-string_t *readNumber(string_t *content, int *idx, int *col);
+string_t *readIdentifier(string_t *content, int *idx, int *ln, int *col, int *lnIdx);
+string_t *readNumber(string_t *content, int *idx, int *ln, int *col, int *lnIdx);
 string_t *readSymbol(string_t *content, int *idx, int *ln, int *col, int *lnIdx);
 void addIdentifier(list_t *l, int line, int col, int idx, string_t *identifier);
 void addNumber(list_t *l, int line, int col, int idx, string_t *number);
@@ -135,7 +135,7 @@ void process(string_t *content, list_t *leximsList);
 
 // Parser Helpers
 void lineError(char *title, char *msg, int idx, int lineIdx, int lineNum, int colNum);
-void printIndicator(int idx, int lineIdx, int lineNum, int colNum);
+void printIndicator(int lineIdx, int lineNum, int colNum);
 void error(node_t *token, char *msg, int e);
 int numDigits(int n);
 node_t *nextToken(node_t *token);

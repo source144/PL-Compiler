@@ -175,7 +175,7 @@ void newLine(int *ln, int *col)
 
 #pragma region "Read Functions/Tokenizers"
 
-string_t *readIdentifier(string_t *content, int *idx, int *col)
+string_t *readIdentifier(string_t *content, int *idx, int *ln, int *col, int *lnIdx)
 {
 	// FIXME: use a global/constant buffer
 
@@ -187,7 +187,7 @@ string_t *readIdentifier(string_t *content, int *idx, int *col)
 	do 
 	{
 		if (i >= MAX_IDENT_LEN)
-			DIE("%s", "identifier too long");
+			lineError("SCANNER INTERRUPT", "Identifier too long", *idx - 1, *lnIdx, *ln, *col - i);
 
 		buffer[i++] = content->charAt[*idx];
 
@@ -203,7 +203,7 @@ string_t *readIdentifier(string_t *content, int *idx, int *col)
 	// Allocate memory for identifier
 	if (!(identifier = calloc(1, sizeof(string_t))) ||
 		!(identifier->charAt = calloc(i + 1, sizeof(char))))
-		DIE("%s", "bad memory allocation (internal error)");
+		DIE("%s", "\nSCANNER INTERRUPT - Bad memory allocation (identifier read)");
 		
 	// Copy identifier from buffer
 	identifier->length = i;
@@ -213,7 +213,7 @@ string_t *readIdentifier(string_t *content, int *idx, int *col)
 	return identifier;
 }
 
-string_t *readNumber(string_t *content, int *idx, int *col)
+string_t *readNumber(string_t *content, int *idx, int *ln, int *col, int *lnIdx)
 {
 	int i = 0;
 	char buffer[MAX_DECIM_LEN];
@@ -223,7 +223,7 @@ string_t *readNumber(string_t *content, int *idx, int *col)
 	do 
 	{
 		if (i >= MAX_DECIM_LEN)
-			DIE("%s", "number too long");
+			lineError("SCANNER INTERRUPT", "Number too long", *idx - 1, *lnIdx, *ln, *col - i);
 
 		buffer[i++] = content->charAt[*idx];
 
@@ -237,12 +237,13 @@ string_t *readNumber(string_t *content, int *idx, int *col)
 	} while (isdigit(content->charAt[*idx]));
 
 	if (isalpha(content->charAt[*idx]))
-		DIE("%s", "invalid identifier name (begins with a number)");
+		lineError("SCANNER INTERRUPT", "Invalid identifier name (begins with a number)",
+			*idx - 1, *lnIdx, *ln, *col - i);
 
 	// Allocate memory for number
 	if (!(number = calloc(1, sizeof(string_t))) ||
 		!(number->charAt = calloc(i + 1, sizeof(char))))
-		DIE("%s", "bad memory allocation (internal error)");
+		DIE("%s", "\nSCANNER INTERRUPT - Bad memory allocation (number read)");
 		
 	// Copy number from buffer
 	number->length = i;
@@ -292,7 +293,7 @@ string_t *readSymbol(string_t *content, int *idx, int *ln, int *col, int *lnIdx)
 
 					// Must have another character after '*'
 					if (++(*idx) >= content->length)
-						DIE("%s", "\nSCANNER INTERRUPT\tInput file ends abrubtly");
+						lineError("SCANNER INTERRUPT", "Input file ends abrubtly", *idx - 1, *lnIdx, *ln, *col);
 
 					// Check if comment ended	
 					if (content->charAt[*idx] == '/') break;
@@ -315,10 +316,11 @@ string_t *readSymbol(string_t *content, int *idx, int *ln, int *col, int *lnIdx)
 			++(*col);
 
 			if (++(*idx) >= content->length)
-				DIE("%s", "input file ends abrubtly 555");
+				lineError("SCANNER INTERRUPT", "Input file ends abrubtly", *idx - 1, *lnIdx, *ln, *col - 1);
 			
 			if (content->charAt[*idx] != '=')
-				DIE("%s", "A column (:) must be followed by an equals sign (=)");
+				lineError("SCANNER INTERRUPT", "A column (:) must be followed by an equals sign (=)",
+					*idx - 1, *lnIdx, *ln, *col - 1);
 
 			// Store in buffer and increment idx
 			buffer[i++] = content->charAt[*idx];
@@ -331,18 +333,19 @@ string_t *readSymbol(string_t *content, int *idx, int *ln, int *col, int *lnIdx)
 			++(*col);
 
 			if (++(*idx) >= content->length)
-				DIE("%s", "input file ends abrubtly 666");
+				lineError("SCANNER INTERRUPT", "Input file ends abrubtly", *idx - 1, *lnIdx, *ln, *col - 1);
 			
 			// Check if >= or <=
 			if (content->charAt[*idx] == '=')
 				buffer[i++] = content->charAt[*idx];
+
 			break;
 	}
 
 	// Allocate memory for symbol
 	if (!(symbol = calloc(1, sizeof(string_t))) ||
 		!(symbol->charAt = calloc(i + 1, sizeof(char))))
-		DIE("%s", "bad memory allocation (internal error)");
+		DIE("%s", "\nSCANNER INTERRUPT - Bad memory allocation (symbol read)");
 
 	// Copy symbol from buffer
 	symbol->length = i;
@@ -408,7 +411,7 @@ string_t *readFile(char *filename)
 	int fLen;
 		
 	if (!(fp = fopen(filename, "r")))
-		DIE("\nINTERRUPTED\tUnable to read source code file \"%s\"!", filename);
+		DIE("\nINTERRUPTED - Unable to read source code file \"%s\"!", filename);
 
 
 	// Get the length of the file
@@ -496,10 +499,10 @@ void process(string_t *content, list_t *leximsList)
 		}
 
 		if (isalpha(content->charAt[i]))
-			addIdentifier(leximsList, ln, col, lineIdx, readIdentifier(content, &i, &col));
+			addIdentifier(leximsList, ln, col, lineIdx, readIdentifier(content, &i, &ln, &col, &lineIdx));
 			
 		else if (isdigit(content->charAt[i]))
-			addNumber(leximsList, ln, col, lineIdx, readNumber(content, &i, &col));
+			addNumber(leximsList, ln, col, lineIdx, readNumber(content, &i, &ln, &col, &lineIdx));
 
 		else if (isValidSymbol(content->charAt[i]))
 			addSymbol(leximsList, ln, col, lineIdx, readSymbol(content, &i, &ln, &col, &lineIdx));
@@ -513,28 +516,28 @@ void lineError(char *title, char *msg, int idx, int lineIdx, int lineNum, int co
 {
 	// Specific message and exit
 	OUT("\n%s - %s", title, msg);
-	printIndicator(idx, lineIdx, lineNum, colNum);
+	printIndicator(lineIdx, lineNum, colNum);
 	exit(EXIT_FAILURE);
 }
 
-void printIndicator(int idx, int lineIdx, int lineNum, int colNum)
+void printIndicator(int lineIdx, int lineNum, int colNum)
 {
 	// Spaces for nice formatting
 	// (NOTE: 8 chars by default: LINE X, X: *col* ^ )
 	// LINE 5, 5:  x = y + 56;
-	int j, numSpaces = 8 + numDigits(lineNum) + numDigits(colNum) + colNum;
+	int i, j, numSpaces = 8 + numDigits(lineNum) + numDigits(colNum) + colNum;
 
 	// Source code line with error, and spaces for nice formatting (+1 for NUL terminator)
-	char line[__content->length - idx + 1], indicator[numSpaces + 1];
+	char line[__content->length - lineIdx + 1], indicator[numSpaces + 2];
 
 	// Set line and space buffer
-	for (idx = lineIdx; idx < __content->length && __content->charAt[idx] && __content->charAt[idx] != '\n'; idx++)
+	for (i = lineIdx; i < __content->length && __content->charAt[i] && __content->charAt[i] != '\n'; i++)
 	{
-		j = idx - lineIdx;
+		j = i - lineIdx;
 		// Every white space is going to be a simple space
-		if (isspace(__content->charAt[idx]))
+		if (isspace(__content->charAt[i]))
 			line[j] = ' ';
-		else line[j] = __content->charAt[idx];
+		else line[j] = __content->charAt[i];
 
 		if (j < numSpaces)
 			indicator[j] = ' ';
@@ -558,73 +561,49 @@ void error(node_t *token, char *msg, int e)
 {
 	if (!token)
 	{
-		if (msg)	DIE("INTERRUPTED - %s", msg);
-		else		DIE("INTERRUPTED - Unexpected Error (%d)", e);
+		if (msg)	DIE("\nINTERRUPTED - %s", msg);
+		else		DIE("\nINTERRUPTED - Unexpected Error (%d)", e);
 	}
-	
-	// Spaces for nice formatting
-	// (NOTE: 8 chars by default: LINE X, X: *col* ^ )
-	// LINE 5, 5:  x = y + 56;
-	int i, j, numSpaces = 8 + numDigits(token->__line) + numDigits(token->__col) + token->__col;
 
-	// Source code line with error, and spaces for nice formatting (+1 for NUL terminator)
-	char line[__content->length - token->__idx + 1], indicator[numSpaces + 2];
+	// Print Error Header
+	OUT("", "");
+	fprintf(stderr, "INTERRUPTED - ", msg);
 
-	// Set line and space buffer
-	for (i = token->__idx; i < __content->length && __content->charAt[i] && __content->charAt[i] != '\n'; i++)
+	// Generic Error
+	if (!msg)
 	{
-		j = i - token->__idx;
-		// Every white space is going to be a simple space
-		if (isspace(__content->charAt[i]))
-			line[j] = ' ';
-		else line[j] = __content->charAt[i];
-
-		if (j < numSpaces)
-			indicator[j] = ' ';
+		if (e == 1)	fprintf(stderr, "Use \"=\" instead of \":=\" (ERR ", "INTERRUPTED - Use \"=\" instead of \":=\"\n", e);
+		else if (e == 2)	fprintf(stderr, "\"=\" must be followed by a number (ERR %d).\n", e);
+		else if (e == 3)	fprintf(stderr, "Identifier must be followed by = (ERR %d).\n", e);
+		else if (e == 4)	fprintf(stderr, "const, var, procedure must be followed by identifier (ERR %d).\n", e);
+		else if (e == 5)	fprintf(stderr, "Semicolon or comma missing (ERR %d).\n", e);
+		else if (e == 6)	fprintf(stderr, "Incorrect symbol after procedure declaration (ERR %d).\n", e);
+		else if (e == 7)	fprintf(stderr, "Statement expected (ERR %d).\n", e);
+		else if (e == 8)	fprintf(stderr, "Incorrect symbol after statement part in block (ERR %d).\n", e);
+		else if (e == 9)	fprintf(stderr, "Period expected (ERR %d).\n", e);
+		else if (e == 10)	fprintf(stderr, "Semicolon between statements missing (ERR %d).\n", e);
+		else if (e == 11)	fprintf(stderr, "Undeclared identifier (ERR %d).\n", e);
+		else if (e == 12)	fprintf(stderr, "Assignment to constant or procedure is not allowed (ERR %d).\n", e);
+		else if (e == 13)	fprintf(stderr, "Assignment operator \":=\" expected (ERR %d).\n", e);
+		else if (e == 14)	fprintf(stderr, "call must be followed by an identifier (ERR %d).\n", e);
+		else if (e == 15)	fprintf(stderr, "Call of a constant or variable is meaningless (ERR %d).\n", e);
+		else if (e == 16)	fprintf(stderr, "then expected (ERR %d).\n", e);
+		else if (e == 17)	fprintf(stderr, "Semicolon or \"}\" expected (ERR %d).\n", e);
+		else if (e == 18)	fprintf(stderr, "do expected (ERR %d).\n", e);
+		else if (e == 19)	fprintf(stderr, "Incorrect symbol following statement (ERR %d).\n", e);
+		else if (e == 20)	fprintf(stderr, "Relational operator expecte (ERR %d).\n", e);
+		else if (e == 21)	fprintf(stderr, "Expression must not contain a procedure identifier (ERR %d).\n", e);
+		else if (e == 22)	fprintf(stderr, "Right parenthesis missing (ERR %d).\n", e);
+		else if (e == 23)	fprintf(stderr, "The preceding factor cannot begin with this symbol (ERR %d).\n", e);
+		else if (e == 24)	fprintf(stderr, "An expression cannot begin with this symbol (ERR %d).\n", e);
+		else if (e == 25)	fprintf(stderr, "This number is too large (ERR %d).\n", e);
 	}
-	line[j + 1] = '\0'; // Terminate
+	else if (e > 0)	fprintf(stderr, "%s (ERR %d)\n", msg, e);
+	else 			fprintf(stderr, "%s\n", msg);
 
-	// Continue filling spaces buffer if needed
-	for (; j < numSpaces; j++)
-		indicator[j] = ' ';
-
-	// The indicator (^) itself and termination
-	indicator[numSpaces] = '^';
-	indicator[numSpaces + 1] = '\0';
-
-	// Specific message
-	if (msg)
-		DIE("INTERRUPTED - %s\nLINE %d, %d: %s\n%s", msg, token->__line, token->__col, line, indicator);
-// lineError
-	// Generic error
-	switch (e)
-	{
-		case 1:		DIE("\nINTERRUPTED - Use \"=\" instead of \":=\" (ERR ", "INTERRUPTED - Use \"=\" instead of \":=\"LINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-		case 2:		DIE("\nINTERRUPTED - \"=\" must be followed by a number (ERR %d).\nLINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-		case 3:		DIE("\nINTERRUPTED - Identifier must be followed by = (ERR %d).\nLINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-		case 4:		DIE("\nINTERRUPTED - const, var, procedure must be followed by identifier (ERR %d).\nLINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-		case 5:		DIE("\nINTERRUPTED - Semicolon or comma missing (ERR %d).\nLINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-		case 6:		DIE("\nINTERRUPTED - Incorrect symbol after procedure declaration (ERR %d).\nLINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-		case 7:		DIE("\nINTERRUPTED - Statement expected (ERR %d).\nLINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-		case 8:		DIE("\nINTERRUPTED - Incorrect symbol after statement part in block (ERR %d).\nLINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-		case 9:		DIE("\nINTERRUPTED - Period expected (ERR %d).\nLINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-		case 10:	DIE("\nINTERRUPTED - Semicolon between statements missing (ERR %d).\nLINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-		case 11:	DIE("\nINTERRUPTED - Undeclared identifier (ERR %d).\nLINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-		case 12:	DIE("\nINTERRUPTED - Assignment to constant or procedure is not allowed (ERR %d).\nLINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-		case 13:	DIE("\nINTERRUPTED - Assignment operator \":=\" expected (ERR %d).\nLINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-		case 14:	DIE("\nINTERRUPTED - call must be followed by an identifier (ERR %d).\nLINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-		case 15:	DIE("\nINTERRUPTED - Call of a constant or variable is meaningless (ERR %d).\nLINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-		case 16:	DIE("\nINTERRUPTED - then expected (ERR %d).\nLINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-		case 17:	DIE("\nINTERRUPTED - Semicolon or \"}\" expected (ERR %d).\nLINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-		case 18:	DIE("\nINTERRUPTED - do expected (ERR %d).\nLINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-		case 19:	DIE("\nINTERRUPTED - Incorrect symbol following statement (ERR %d).\nLINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-		case 20:	DIE("\nINTERRUPTED - Relational operator expecte (ERR %d).\nLINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-		case 21:	DIE("\nINTERRUPTED - Expression must not contain a procedure identifier (ERR %d).\nLINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-		case 22:	DIE("\nINTERRUPTED - Right parenthesis missing (ERR %d).\nLINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-		case 23:	DIE("\nINTERRUPTED - The preceding factor cannot begin with this symbol (ERR %d).\nLINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-		case 24:	DIE("\nINTERRUPTED - An expression cannot begin with this symbol (ERR %d).\nLINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-		case 25:	DIE("\nINTERRUPTED - This number is too large (ERR %d).\nLINE %d, %d: %s\n%s", e, token->__line, token->__col, line, indicator);
-	}
+	// Print Indicator and Exit
+	printIndicator(token->__idx, token->__line, token->__col);
+	exit(EXIT_FAILURE);
 }
 
 node_t *nextToken(node_t *token)
@@ -755,7 +734,7 @@ node_t *constdec(int lvl, int *tblIdx, int *m, node_t *token, symbol_t *tbl)
 
 			// Next lexim should be a number
 			if (token->token != numbersym)
-				DIE("%s", "Unexpected Token!!");
+				error(token, "Expected a number!", -1);
 
 			// Enter to symbol table
 			tableInsert(CONST, name, tblIdx, lvl, 0, atoi(token->data->charAt), tbl);
@@ -766,7 +745,7 @@ node_t *constdec(int lvl, int *tblIdx, int *m, node_t *token, symbol_t *tbl)
 			break;
 
 		default:
-			DIE("%s", "Unexpected token!");
+			error(token, "Unexpected token!", -1);
 			break;
 	}
 
@@ -938,7 +917,12 @@ node_t *statement(int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *t
 			break;
 
 		case semicolonsym:
+			printf("semicolumn\n");
 			break;
+
+		case varsym:
+		case constsym:
+			error(token, "declarations must be made on a block level", -1);
 
 		default:
 			error(token, "Unexpected token", -1);
@@ -1112,7 +1096,7 @@ node_t *factor(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_
 			break;
 
 		default:
-			DIE("%s", "Unexpected token!");
+			error(token, "Expected an identifier/number/expression!", -1);
 			break;
 	}
 
@@ -1121,18 +1105,14 @@ node_t *factor(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_
 
 void emitCode(int *idx, int op, int r, int l, int m, instruction_t *code)
 {
-	if (*idx >= MAX_CODE_LENGTH)
-	{
-		// TODO: die?
-		OUT("%s", "Code surpasses max code length!");
-	}
-	else
+	if (*idx < MAX_CODE_LENGTH)
 	{
 		code[*idx].op = op;
 		code[*idx].r = r;
 		code[*idx].l = l;
 		code[*idx].m = m;
 	}
+	else error(NULL, "Exceeded PL\\0's Machine Code line limit", -1);
 
 	// Increment code index
 	(*idx)++;
@@ -1141,10 +1121,12 @@ void emitCode(int *idx, int op, int r, int l, int m, instruction_t *code)
 void tableInsert(int kind, char *name, int *idx, int lvl, int *addr, int val, symbol_t tbl[MAX_TABLE_SIZE])
 {
 	// TODO: Check if idx overflows symbol table
+	if (*idx >= MAX_TABLE_SIZE)
+		error(NULL, "Exceeded Symbol Table size", -1);
 
 	// TODO: Check if identifier already exists in this level
 	if (lookup(name, lvl, idx, tbl))
-		DIE("EXITING - Variable %s defined twice!!", name);
+		DIE("\nINTERRUPTED - redeclaration of '%s'", name);
 
 	// Set symbol data
 	switch ((tbl[*idx].kind = kind))
@@ -1164,7 +1146,7 @@ void tableInsert(int kind, char *name, int *idx, int lvl, int *addr, int val, sy
 			break;
 		
 		default:
-			DIE("%s", "Unexpected Symbol kind!");
+			error(NULL, "Unexpected Symbol kind", -1);
 			break;
 	}
 
@@ -1211,7 +1193,7 @@ instruction_t **compile(char *sourcecodePath, int lexFlag, int asmblyFlag)
 
 	// Memory Allocations
 	if (!(lexims = createList()) || !(rtnCode = calloc(MAX_CODE_LENGTH, sizeof(instruction_t))))
-		DIE("%s", "bad memory allocation (internal error)");
+		DIE("%s", "\nINTERRUPTED\tBad memory allocation (internal error)");
 	
 	if (!(__content = readFile(sourcecodePath)))
 		DIE("%s", "unable to PL/0 sourcecode (IO Error)");
