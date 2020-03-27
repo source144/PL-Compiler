@@ -1,13 +1,11 @@
 // Gonen Matias
 // COP 3402, Spring 2020
 // NID: go658748
-// Version: 02/10/2020 10:50PM
+// Version: 03/27/2020 05:36PM
 
 // TODO: Organize code
 // TODO: add global buffers (conserve memory and runtime?)
 // TODO: add comments to functions
-// TODO: Fix col counter
-// TODO: output line and col with error details
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -293,7 +291,7 @@ string_t *readSymbol(string_t *content, int *idx, int *ln, int *col, int *lnIdx)
 
 					// Must have another character after '*'
 					if (++(*idx) >= content->length)
-						lineError("SCANNER INTERRUPT", "Input file ends abrubtly", *idx - 1, *lnIdx, *ln, *col);
+						lineError("SCANNER INTERRUPT", "Source code ends abrubtly", *idx - 1, *lnIdx, *ln, *col);
 
 					// Check if comment ended	
 					if (content->charAt[*idx] == '/') break;
@@ -316,7 +314,7 @@ string_t *readSymbol(string_t *content, int *idx, int *ln, int *col, int *lnIdx)
 			++(*col);
 
 			if (++(*idx) >= content->length)
-				lineError("SCANNER INTERRUPT", "Input file ends abrubtly", *idx - 1, *lnIdx, *ln, *col - 1);
+				lineError("SCANNER INTERRUPT", "Source code ends abrubtly", *idx - 1, *lnIdx, *ln, *col - 1);
 			
 			if (content->charAt[*idx] != '=')
 				lineError("SCANNER INTERRUPT", "A column (:) must be followed by an equals sign (=)",
@@ -333,12 +331,17 @@ string_t *readSymbol(string_t *content, int *idx, int *ln, int *col, int *lnIdx)
 			++(*col);
 
 			if (++(*idx) >= content->length)
-				lineError("SCANNER INTERRUPT", "Input file ends abrubtly", *idx - 1, *lnIdx, *ln, *col - 1);
+				lineError("SCANNER INTERRUPT", "Source code ends abrubtly", *idx - 1, *lnIdx, *ln, *col - 1);
 			
-			// Check if >= or <=
-			if (content->charAt[*idx] == '=')
-				buffer[i++] = content->charAt[*idx];
-
+			if ((content->charAt[*idx - 1] != '<' || content->charAt[*idx] != '>') 
+				&& content->charAt[*idx] != '=')
+			{
+				--(*idx);
+				--(*col);
+			}
+			else buffer[i++] = content->charAt[*idx];
+			
+			// printf("buffer(%d): \"%s\"\n", i, buffer);
 			break;
 	}
 
@@ -436,7 +439,6 @@ void printLeximTable(list_t *leximList)
 	int i;
 	node_t *node;
 
-	// TODO: implement
 	printf("Lexeme Table:\n");
 	printf("lexeme      token type\n");
 	for (node = leximList->head; node; node = node->next)
@@ -453,7 +455,6 @@ void printLeximList(list_t *leximList)
 	int i;
 	node_t *node;
 
-	// TODO: implement
 	printf("Lexeme List:\n");
 	for (node = leximList->head; node && node != leximList->tail; node = node->next)
 	{
@@ -476,9 +477,6 @@ void process(string_t *content, list_t *leximsList)
 {
 	string_t *buffer;
 	int i, ln, col, lineIdx, tmp;
-
-	// TODO: keep track of line and column
-	// TODO: have line and column in output in case of errors
 
 	for (col = ln = 1, lineIdx = i = 0; i < content->length && content->charAt[i]; )
 	{
@@ -552,7 +550,7 @@ void printIndicator(int lineIdx, int lineNum, int colNum)
 	indicator[numSpaces] = '^';
 	indicator[numSpaces + 1] = '\0';
 
-	fprintf(stderr, "LINE %d, %d: %s\n%s", lineNum, colNum, line, indicator);
+	fprintf(stderr, "LINE %d, %d: %s\n%s\n", lineNum, colNum, line, indicator);
 }
 #pragma region "Parser Helpers"
 
@@ -608,10 +606,21 @@ void error(node_t *token, char *msg, int e)
 
 node_t *nextToken(node_t *token)
 {
-	if (token == NULL || token->next == NULL)
+	if (!token)
+		error(NULL, "Unable to process NULL token", -1);
+
+	if (!token->next)
 	{
-		// if (token && )
-		error(token, "NEXT TOKEN FAILED!! next token is NULL", -1);
+		// Output will look nice if
+		// we exit on missing period
+		token->__col += 3;
+
+		// Missing period token
+		if (token->token == endsym)
+			error(token, NULL, 9);
+		
+		// End abruptly
+		else error(NULL, "Source code ends abrubtly, expected more tokens", -1);
 	}
 	
 	return token->next;
@@ -661,10 +670,7 @@ node_t *block(int lvl, int tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, i
 			while ((token = constdec(lvl, &tblIdx, &reserve, token, tbl))->token == commasym);
 				
 			if (token->token != semicolonsym)
-			{
 				error(token, NULL, 5);
-			}
-			// TODO: next token
 		}
 		else if (token->token == varsym)
 		{
@@ -673,9 +679,7 @@ node_t *block(int lvl, int tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, i
 			while ((token = vardec(lvl, &tblIdx, &reserve, token, tbl))->token == commasym);
 
 			if (token->token != semicolonsym)
-			{
 				error(token, NULL, 5);
-			}
 		}
 		else
 		{
@@ -696,29 +700,19 @@ node_t *block(int lvl, int tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, i
 	token = statement(lvl, &tblIdx, codeIdx, token, tbl, code);
 
 	// If this is our main we exit
-	if (!lvl)
-	{
-		// Emit exit instruction
-		emitCode(codeIdx, OP_EXT, 0, 0, 3, code);
-	}
+	if (!lvl)	emitCode(codeIdx, OP_EXT, 0, 0, 3, code);
 
 	// Otherwise we return from block/call?
-	else
-	{
-		// Emit return instruction
-		emitCode(codeIdx, OP_RTN, 0, 0, 0, code);
-	}
+	else		emitCode(codeIdx, OP_RTN, 0, 0, 0, code);
 
 	return token;
 }
 
 node_t *constdec(int lvl, int *tblIdx, int *m, node_t *token, symbol_t *tbl)
 {
+	// Unexpected Token
 	if (token->token != identsym)
-	{
-		// Unexpected Token
 		error(token, NULL, 4);
-	}
 	
 	// Recall identifier name
 	char *name = token->data->charAt;
@@ -1195,11 +1189,12 @@ int main(int argc, char *argv[])
 	char *path = PLMC_OUT;
 	list_t *lexims;
 	FILE *out;
-	char *in;
+	char *in, *o;
 
 	// Init to 0 (NULL)
 	__content = NULL;
 	out = NULL;
+	o = NULL;
 	l = a = 0;
 
 	// Process args and directives
@@ -1224,7 +1219,7 @@ int main(int argc, char *argv[])
 				case FLAG_OUT:
 					// Define output file if it hasn't been defined yet
 					// If missing arguments or file can't be writting to exit and display error
-					if (!out && (i == argc - 1 || !(out = fopen(argv[++i], "w"))))
+					if (!o && i == argc - 1)
 					{
 						// Free memory if needed
 						if (__content)
@@ -1233,6 +1228,8 @@ int main(int argc, char *argv[])
 						// Display error and exit
 						DIE("%s","\nEXITED\t-o output directive must be followed by a valid file path!");
 					}
+
+					o = argv[++i];
 					break;
 
 				default:
@@ -1261,14 +1258,6 @@ int main(int argc, char *argv[])
 	if (!__content)
 		DIE("%s", "\nEXITED - Missing source code argument!");
 
-	// Define out if it wasn't overrided (-o)
-	if (!out && !(out = fopen(PLMC_OUT, "w")))
-		DIE("\nINTERRUPTED - Unable to write machine code to \"%s\"", PLMC_OUT);
-		
-	
-	// if (!(out = fopen("a.plmc", "w")))
-	// 	DIE("%s", "Unable to write machinecode to file!");)
-
 	// Init Scanner
 	if (!(lexims = createList()))
 		DIE("%s", "\nINTERRUPTED - Bad memory allocation (internal error)");
@@ -1287,6 +1276,10 @@ int main(int argc, char *argv[])
 
 	// Run Parser
 	numInstrctions = program(lexims, tbl, code);
+
+	// Open default/overriden file to write machine code to
+	if (!(out = fopen(o = o ? o : PLMC_OUT, "w")))
+		DIE("\nINTERRUPTED - Unable to write machine code to \"%s\"", o);
 
 	// Write Machine Code
 	if (numInstrctions > 0)
