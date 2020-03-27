@@ -91,7 +91,7 @@ void add(list_t *l, int line, int col, int idx, string_t *data, int token)
 	node_t *node;
 
 	if (!(node = createNode(data, line, col - data->length, idx, token)))
-		DIE("%s", "bad memory allocation (add)");
+		DIE("%s", "EXITED - Bad memory allocation (add)");
 
 	if (!l->tail)
 		l->head = node;
@@ -125,7 +125,7 @@ node_t *createNode(string_t *data, int line, int col, int idx, int token)
 	node_t *node;
 
 	if (!(node = calloc(1, sizeof(node_t))))
-		DIE("%s", "bad memory allocation (createNode)");
+		DIE("%s", "EXITED - Bad memory allocation (add)");
 
 	node->data = data;
 	node->token = token;
@@ -1120,11 +1120,11 @@ void emitCode(int *idx, int op, int r, int l, int m, instruction_t *code)
 
 void tableInsert(int kind, char *name, int *idx, int lvl, int *addr, int val, symbol_t tbl[MAX_TABLE_SIZE])
 {
-	// TODO: Check if idx overflows symbol table
+	// Check if idx overflows symbol table
 	if (*idx >= MAX_TABLE_SIZE)
 		error(NULL, "Exceeded Symbol Table size", -1);
 
-	// TODO: Check if identifier already exists in this level
+	// Check if identifier already exists in this level
 	if (lookup(name, lvl, idx, tbl))
 		DIE("\nINTERRUPTED - redeclaration of '%s'", name);
 
@@ -1177,65 +1177,6 @@ int lookup(char *name, int lvl, int *tblIdx, symbol_t *tbl)
 	}
 
 	return 0;
-}
-
-
-instruction_t **compile(char *sourcecodePath, int lexFlag, int asmblyFlag)
-{
-	instruction_t code[MAX_CODE_LENGTH], **rtnCode;
-	symbol_t tbl[MAX_TABLE_SIZE];
-	int numInstrctions, i;
-	FILE *machinecode;
-	list_t *lexims;
-
-	if (!sourcecodePath)
-		return 0;
-
-	// Memory Allocations
-	if (!(lexims = createList()) || !(rtnCode = calloc(MAX_CODE_LENGTH, sizeof(instruction_t))))
-		DIE("%s", "\nINTERRUPTED\tBad memory allocation (internal error)");
-	
-	if (!(__content = readFile(sourcecodePath)))
-		DIE("%s", "unable to PL/0 sourcecode (IO Error)");
-
-	// Scanner
-	process(__content, lexims);
-
-	// Print Scanner output
-	if (lexFlag)
-	{
-		printLeximTable(lexims);
-		printf("\n\n");
-		printLeximList(lexims);
-		printf("\n\n");
-	}
-
-	// Parser
-	numInstrctions = program(lexims, tbl, code);
-
-	if (numInstrctions > 0)
-	{
-		for (i = 0; i < numInstrctions - 1; i++)
-		{
-			rtnCode[i] = _createInstruction(code[i].op, code[i].r, code[i].l, code[i].m);
-
-			// Print Parser code on line i
-			if (asmblyFlag)
-				printf("%d %d %d %d\n", code[i].op, code[i].r, code[i].l, code[i].m);
-		}
-		rtnCode[i] = _createInstruction(code[i].op, code[i].r, code[i].l, code[i].m);
-
-		// Print Parser code on last line
-		if (asmblyFlag)
-			printf("%d %d %d %d\n\n", code[i].op, code[i].r, code[i].l, code[i].m);
-	}
-
-	// Clean up after yourself ;)
-	destroyList(lexims);
-	destroyString(__content);
-	fclose(machinecode);
-
-	return rtnCode;
 }
 
 // TODO: the compiler's main
@@ -1303,11 +1244,10 @@ int main(int argc, char *argv[])
 					// "-l			Prints Lexemes (list and table) to STDOUT"
 					// "-a			Prints Produced Machine Code to STDOUT, in ADDITION(!) to saving Machine Code to a file"
 					// "-o %path%	Writes the Produced Machine Code to \%path\% instead of %s (default path)"
-					DIE("\nEXITED\tUnkown Directive \"%s\"!\n\n%s\n%c%c\t\t%s\n%c%c\t\t%s\n%c%c %%path%%\t%s%s%s\n", argv[i],
+					DIE("\nEXITED - Unkown Directive \"%s\"!\n\n%s\n%c%c\t\t%s\n%c%c\t\t%s\n%c%c %%path%%\t%s%s%s\n", argv[i],
 						"Supported Dircetives:", FLAG, FLAG_LEX, "Prints Lexemes (list and table) to STDOUT",
 						FLAG, FLAG_ASMBLY, "Prints Produced Machine Code to STDOUT, in ADDITION(!) to saving Machine Code to a file",
 						FLAG, FLAG_OUT, "Writes the Produced Machine Code to %path% instead of ", PLMC_OUT, " (default path)");
-					// TOOD: Die - Unknown directive!
 					break;
 			}
 		}
@@ -1319,11 +1259,11 @@ int main(int argc, char *argv[])
 
 	// Check if sourcecode path was provided
 	if (!__content)
-		DIE("%s", "\nEXITED\tMissing source code argument!");
+		DIE("%s", "\nEXITED - Missing source code argument!");
 
 	// Define out if it wasn't overrided (-o)
 	if (!out && !(out = fopen(PLMC_OUT, "w")))
-		DIE("\nINTERRUPTED\tUnable to write machine code to \"%s\"", PLMC_OUT);
+		DIE("\nINTERRUPTED - Unable to write machine code to \"%s\"", PLMC_OUT);
 		
 	
 	// if (!(out = fopen("a.plmc", "w")))
@@ -1331,7 +1271,7 @@ int main(int argc, char *argv[])
 
 	// Init Scanner
 	if (!(lexims = createList()))
-		DIE("%s", "\nINTERRUPTED\tBad memory allocation (internal error)");
+		DIE("%s", "\nINTERRUPTED - Bad memory allocation (internal error)");
 
 	// Run Scanner
 	process(__content, lexims);
@@ -1347,9 +1287,6 @@ int main(int argc, char *argv[])
 
 	// Run Parser
 	numInstrctions = program(lexims, tbl, code);
-
-	// TODO: remove
-	// printf("Generated Machine Code for \"%s\":\n", argv[1]);
 
 	// Write Machine Code
 	if (numInstrctions > 0)
@@ -1381,3 +1318,64 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
+
+#pragma region "DEPRECATED"
+// // DEPRECATED // //
+// instruction_t **compile(char *sourcecodePath, int lexFlag, int asmblyFlag)
+// {
+// 	instruction_t code[MAX_CODE_LENGTH], **rtnCode;
+// 	symbol_t tbl[MAX_TABLE_SIZE];
+// 	int numInstrctions, i;
+// 	FILE *machinecode;
+// 	list_t *lexims;
+
+// 	if (!sourcecodePath)
+// 		return 0;
+
+// 	// Memory Allocations
+// 	if (!(lexims = createList()) || !(rtnCode = calloc(MAX_CODE_LENGTH, sizeof(instruction_t))))
+// 		DIE("%s", "\nINTERRUPTED\tBad memory allocation (internal error)");
+	
+// 	if (!(__content = readFile(sourcecodePath)))
+// 		DIE("%s", "unable to PL/0 sourcecode (IO Error)");
+
+// 	// Scanner
+// 	process(__content, lexims);
+
+// 	// Print Scanner output
+// 	if (lexFlag)
+// 	{
+// 		printLeximTable(lexims);
+// 		printf("\n\n");
+// 		printLeximList(lexims);
+// 		printf("\n\n");
+// 	}
+
+// 	// Parser
+// 	numInstrctions = program(lexims, tbl, code);
+
+// 	if (numInstrctions > 0)
+// 	{
+// 		for (i = 0; i < numInstrctions - 1; i++)
+// 		{
+// 			rtnCode[i] = _createInstruction(code[i].op, code[i].r, code[i].l, code[i].m);
+
+// 			// Print Parser code on line i
+// 			if (asmblyFlag)
+// 				printf("%d %d %d %d\n", code[i].op, code[i].r, code[i].l, code[i].m);
+// 		}
+// 		rtnCode[i] = _createInstruction(code[i].op, code[i].r, code[i].l, code[i].m);
+
+// 		// Print Parser code on last line
+// 		if (asmblyFlag)
+// 			printf("%d %d %d %d\n\n", code[i].op, code[i].r, code[i].l, code[i].m);
+// 	}
+
+// 	// Clean up after yourself ;)
+// 	destroyList(lexims);
+// 	destroyString(__content);
+// 	fclose(machinecode);
+
+// 	return rtnCode;
+// }
+#pragma endregion
