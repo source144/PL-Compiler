@@ -2,8 +2,7 @@
 #define PVM_COMPILER_H
 
 // Constants
-#define DEF_OUT				"a.plmc"
-#define OUT_DIRECTIVE		"-o"
+#define PLMC_OUT			"a.plmc"
 #define MAX_IDENT_LEN		11
 #define MAX_DECIM_LEN		5
 #define MAX_SYMBL_LEN		2
@@ -135,6 +134,8 @@ void printLeximList(list_t *leximList);
 void process(string_t *content, list_t *leximsList);
 
 // Parser Helpers
+void lineError(char *title, char *msg, int idx, int lineIdx, int lineNum, int colNum);
+void printIndicator(int idx, int lineIdx, int lineNum, int colNum);
 void error(node_t *token, char *msg, int e);
 int numDigits(int n);
 node_t *nextToken(node_t *token);

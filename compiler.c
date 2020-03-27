@@ -191,12 +191,14 @@ string_t *readIdentifier(string_t *content, int *idx, int *col)
 
 		buffer[i++] = content->charAt[*idx];
 
-		if (++(*idx) >= content->length)
-			DIE("%s", "input file ends abrubtly");
-
 		// Increment column number
 		++(*col);
-	}	while (isalnum(content->charAt[*idx]));
+
+		// File ends
+		if (++(*idx) >= content->length)
+			break;
+			
+	} while (isalnum(content->charAt[*idx]));
 
 	// Allocate memory for identifier
 	if (!(identifier = calloc(1, sizeof(string_t))) ||
@@ -207,9 +209,6 @@ string_t *readIdentifier(string_t *content, int *idx, int *col)
 	identifier->length = i;
 	for (i = 0; i < identifier->length; i++)
 		identifier->charAt[i] = buffer[i];
-
-	// Decrement column number
-	// --(*col);
 
 	return identifier;
 }
@@ -228,11 +227,13 @@ string_t *readNumber(string_t *content, int *idx, int *col)
 
 		buffer[i++] = content->charAt[*idx];
 
-		if (++(*idx) >= content->length)
-			DIE("%s", "input file ends abrubtly");
-		
 		// Increment column number
 		++(*col);
+
+		// File ends
+		if (++(*idx) >= content->length)
+			break;
+
 	} while (isdigit(content->charAt[*idx]));
 
 	if (isalpha(content->charAt[*idx]))
@@ -247,10 +248,6 @@ string_t *readNumber(string_t *content, int *idx, int *col)
 	number->length = i;
 	for (i = 0; i < number->length; i++)
 		number->charAt[i] = buffer[i];
-
-	// Decrement idx and column number
-	// --(*idx);
-	// --(*col);
 
 	return number;
 }
@@ -272,7 +269,7 @@ string_t *readSymbol(string_t *content, int *idx, int *ln, int *col, int *lnIdx)
 			++(*col);
 
 			if (++(*idx) >= content->length)
-				DIE("%s", "input file ends abrubtly");
+				break;
 			
 			// Check if it's a comment
 			if (content->charAt[*idx] == '*')
@@ -295,7 +292,7 @@ string_t *readSymbol(string_t *content, int *idx, int *ln, int *col, int *lnIdx)
 
 					// Must have another character after '*'
 					if (++(*idx) >= content->length)
-						DIE("%s", "input file ends abrubtly");
+						DIE("%s", "\nSCANNER INTERRUPT\tInput file ends abrubtly");
 
 					// Check if comment ended	
 					if (content->charAt[*idx] == '/') break;
@@ -314,11 +311,11 @@ string_t *readSymbol(string_t *content, int *idx, int *ln, int *col, int *lnIdx)
 			break;
 		
 		case ':':
-			// Increment column number (twice)
-			*col += 2;
+			// Increment column number
+			++(*col);
 
 			if (++(*idx) >= content->length)
-				DIE("%s", "input file ends abrubtly");
+				DIE("%s", "input file ends abrubtly 555");
 			
 			if (content->charAt[*idx] != '=')
 				DIE("%s", "A column (:) must be followed by an equals sign (=)");
@@ -330,16 +327,15 @@ string_t *readSymbol(string_t *content, int *idx, int *ln, int *col, int *lnIdx)
 
 		case '<':
 		case '>':
-			// Increment column number (twice)
-			*col += 2;
+			// Increment column number
+			++(*col);
 
 			if (++(*idx) >= content->length)
-				DIE("%s", "input file ends abrubtly");
+				DIE("%s", "input file ends abrubtly 666");
 			
 			// Check if >= or <=
 			if (content->charAt[*idx] == '=')
 				buffer[i++] = content->charAt[*idx];
-			else --(*col);
 			break;
 	}
 
@@ -355,9 +351,6 @@ string_t *readSymbol(string_t *content, int *idx, int *ln, int *col, int *lnIdx)
 
 	// Increment idx
 	++(*idx);
-
-	// Decrement column number
-	--(*col);
 
 	return symbol;
 }
@@ -415,7 +408,8 @@ string_t *readFile(char *filename)
 	int fLen;
 		
 	if (!(fp = fopen(filename, "r")))
-		DIE("%s", "unable to read file");
+		DIE("\nINTERRUPTED\tUnable to read source code file \"%s\"!", filename);
+
 
 	// Get the length of the file
 	fLen = getFileLength(fp);
@@ -511,44 +505,52 @@ void process(string_t *content, list_t *leximsList)
 			addSymbol(leximsList, ln, col, lineIdx, readSymbol(content, &i, &ln, &col, &lineIdx));
 		
 		// Handle invalid symbols
-		else
-		{
-			// Spaces for nice formatting
-			// (NOTE: 8 chars by default: LINE X, X: *col* ^ )
-			// LINE 5, 5:  x = y + 56;
-			int k, j, numSpaces = 8 + numDigits(ln) + numDigits(col) + col;
-
-			// Source code line with error, and spaces for nice formatting (+1 for NUL terminator)
-			char line[__content->length - i + 1], indicator[numSpaces + 1];
-
-			// Set line and space buffer
-			for (i = k = lineIdx; i < __content->length && __content->charAt[i] && __content->charAt[i] != '\n'; i++)
-			{
-				j = i - k;
-				// Every white space is going to be a simple space
-				if (isspace(__content->charAt[i]))
-					line[j] = ' ';
-				else line[j] = __content->charAt[i];
-
-				if (j < numSpaces)
-					indicator[j] = ' ';
-			}
-			line[j + 1] = '\0'; // Terminate
-
-			// Continue filling spaces buffer if needed
-			for (; j < numSpaces; j++)
-				indicator[j] = ' ';
-
-			// The indicator (^) itself and termination
-			indicator[numSpaces] = '^';
-			indicator[numSpaces + 1] = '\0';
-
-			// Specific message
-			DIE("SCANNER INTERRUPTED - Invalid Symbol\nLINE %d, %d: %s\n%s", ln, col, line, indicator);
-		}
+		else lineError("SCANNER INTERRUPT", "Invalid Symbol", i, lineIdx, ln, col);
 	}
 }
 
+void lineError(char *title, char *msg, int idx, int lineIdx, int lineNum, int colNum)
+{
+	// Specific message and exit
+	OUT("\n%s - %s", title, msg);
+	printIndicator(idx, lineIdx, lineNum, colNum);
+	exit(EXIT_FAILURE);
+}
+
+void printIndicator(int idx, int lineIdx, int lineNum, int colNum)
+{
+	// Spaces for nice formatting
+	// (NOTE: 8 chars by default: LINE X, X: *col* ^ )
+	// LINE 5, 5:  x = y + 56;
+	int j, numSpaces = 8 + numDigits(lineNum) + numDigits(colNum) + colNum;
+
+	// Source code line with error, and spaces for nice formatting (+1 for NUL terminator)
+	char line[__content->length - idx + 1], indicator[numSpaces + 1];
+
+	// Set line and space buffer
+	for (idx = lineIdx; idx < __content->length && __content->charAt[idx] && __content->charAt[idx] != '\n'; idx++)
+	{
+		j = idx - lineIdx;
+		// Every white space is going to be a simple space
+		if (isspace(__content->charAt[idx]))
+			line[j] = ' ';
+		else line[j] = __content->charAt[idx];
+
+		if (j < numSpaces)
+			indicator[j] = ' ';
+	}
+	line[j + 1] = '\0'; // Terminate
+
+	// Continue filling spaces buffer if needed
+	for (; j < numSpaces; j++)
+		indicator[j] = ' ';
+
+	// The indicator (^) itself and termination
+	indicator[numSpaces] = '^';
+	indicator[numSpaces + 1] = '\0';
+
+	fprintf(stderr, "LINE %d, %d: %s\n%s", lineNum, colNum, line, indicator);
+}
 #pragma region "Parser Helpers"
 
 // Parser Error
@@ -593,7 +595,7 @@ void error(node_t *token, char *msg, int e)
 	// Specific message
 	if (msg)
 		DIE("INTERRUPTED - %s\nLINE %d, %d: %s\n%s", msg, token->__line, token->__col, line, indicator);
-
+// lineError
 	// Generic error
 	switch (e)
 	{
@@ -628,7 +630,10 @@ void error(node_t *token, char *msg, int e)
 node_t *nextToken(node_t *token)
 {
 	if (token == NULL || token->next == NULL)
+	{
+		// if (token && )
 		error(token, "NEXT TOKEN FAILED!! next token is NULL", -1);
+	}
 	
 	return token->next;
 }
@@ -1252,50 +1257,145 @@ instruction_t **compile(char *sourcecodePath, int lexFlag, int asmblyFlag)
 }
 
 // TODO: the compiler's main
-// int main(int argc, char *argv[])
-// {
-// 	instruction_t code[MAX_CODE_LENGTH];
-// 	symbol_t tbl[MAX_TABLE_SIZE];
-// 	int numInstrctions, i;
-// 	FILE *machinecode;
-// 	list_t *lexims;
+// The following are the available directives
+// compiler.exe sourcecode.plc -l -o output.plmc
+//   -l  -   Prints lexemes to STDOUT (table and list)
+//   -o  -   Followed by a %outputpath% for the produced machine code
+//           Without this directives, the source code will be stored on: 
+//           "./a.plmc"    (plmc stands for PL/0 Machine Code) 
+// %sourcecode% path must be provided as an argument as well.
+int main(int argc, char *argv[])
+{
+	instruction_t code[MAX_CODE_LENGTH];
+	symbol_t tbl[MAX_TABLE_SIZE];
+	int numInstrctions, i, l, a;
+	char *path = PLMC_OUT;
+	list_t *lexims;
+	FILE *out;
+	char *in;
 
-// 	if (argc < 2)
-// 		DIE("%s", "missing input file argument!");
+	// Init to 0 (NULL)
+	__content = NULL;
+	out = NULL;
+	l = a = 0;
 
-// 	if (!(lexims = createList()))
-// 		DIE("%s", "bad memory allocation (internal error)");
+	// Process args and directives
+	for (i = 1; i < argc; i++)
+	{
+		// Process Directives
+		if (argv[i][0] == FLAG)
+		{
+			switch (argv[i][1])
+			{
+				// -l  -  Print lexemes (stdout)
+				case FLAG_LEX:
+					l = 1;
+					break;
+					
+				// -a  -  Print machinecode (stdout)
+				case FLAG_ASMBLY:
+					a = 1;
+					break;
+
+				// -o  -  Output machinecode
+				case FLAG_OUT:
+					// Define output file if it hasn't been defined yet
+					// If missing arguments or file can't be writting to exit and display error
+					if (!out && (i == argc - 1 || !(out = fopen(argv[++i], "w"))))
+					{
+						// Free memory if needed
+						if (__content)
+							destroyString(__content);
+						
+						// Display error and exit
+						DIE("%s","\nEXITED\t-o output directive must be followed by a valid file path!");
+					}
+					break;
+
+				default:
+					// Free memory if needed
+					if (__content)
+						destroyString(__content);
+					
+					// "Supported Dircetives:"
+					// "-l			Prints Lexemes (list and table) to STDOUT"
+					// "-a			Prints Produced Machine Code to STDOUT, in ADDITION(!) to saving Machine Code to a file"
+					// "-o %path%	Writes the Produced Machine Code to \%path\% instead of %s (default path)"
+					DIE("\nEXITED\tUnkown Directive \"%s\"!\n\n%s\n%c%c\t\t%s\n%c%c\t\t%s\n%c%c %%path%%\t%s%s%s\n", argv[i],
+						"Supported Dircetives:", FLAG, FLAG_LEX, "Prints Lexemes (list and table) to STDOUT",
+						FLAG, FLAG_ASMBLY, "Prints Produced Machine Code to STDOUT, in ADDITION(!) to saving Machine Code to a file",
+						FLAG, FLAG_OUT, "Writes the Produced Machine Code to %path% instead of ", PLMC_OUT, " (default path)");
+					// TOOD: Die - Unknown directive!
+					break;
+			}
+		}
+		
+		// Read Source Code and exit if an error occurs
+		else if (!__content)
+			__content = readFile(in = argv[i]);
+	}
+
+	// Check if sourcecode path was provided
+	if (!__content)
+		DIE("%s", "\nEXITED\tMissing source code argument!");
+
+	// Define out if it wasn't overrided (-o)
+	if (!out && !(out = fopen(PLMC_OUT, "w")))
+		DIE("\nINTERRUPTED\tUnable to write machine code to \"%s\"", PLMC_OUT);
+		
 	
-// 	if (!(__content = readFile(argv[1])))
-// 		DIE("%s", "unable to read file");
+	// if (!(out = fopen("a.plmc", "w")))
+	// 	DIE("%s", "Unable to write machinecode to file!");)
 
-// 	process(__content, lexims);
+	// Init Scanner
+	if (!(lexims = createList()))
+		DIE("%s", "\nINTERRUPTED\tBad memory allocation (internal error)");
+
+	// Run Scanner
+	process(__content, lexims);
 	
-// 	// Print input file
-// 	printLeximTable(lexims);
-// 	printf("\n\n");
-// 	printLeximList(lexims);
-// 	printf("\n\n");
+	// Print lexems
+	if (l)
+	{
+		printLeximTable(lexims);
+		printf("\n\n");
+		printLeximList(lexims);
+		printf("\n\n");
+	}
 
-// 	numInstrctions = program(lexims, tbl, code);
+	// Run Parser
+	numInstrctions = program(lexims, tbl, code);
 
-// 	// TODO: remove
-// 	// printf("Generated Machine Code for \"%s\":\n", argv[1]);
-	
-// 	if (!(machinecode = fopen("a.plmc", "w")))
-// 		DIE("%s", "Unable to write machinecode to file!");
+	// TODO: remove
+	// printf("Generated Machine Code for \"%s\":\n", argv[1]);
 
-// 	if (numInstrctions > 0)
-// 	{
-// 		for (i = 0; i < numInstrctions - 1; i++)
-// 			fprintf(machinecode, "%d %d %d %d\n", code[i].op, code[i].r, code[i].l, code[i].m);
-// 		fprintf(machinecode, "%d %d %d %d", code[i].op, code[i].r, code[i].l, code[i].m);
-// 	}
+	// Write Machine Code
+	if (numInstrctions > 0)
+	{
+		// Print header (-a directive)
+		if (a) printf("Generated Machine Code for \"%s\":\n", in);
 
-// 	// Clean up after yourself ;)
-// 	destroyList(lexims);
-// 	destroyString(__content);
-// 	fclose(machinecode);
+		for (i = 0; i < numInstrctions - 1; i++)
+		{
+			// Write to file
+			fprintf(out, "%d %d %d %d\n", code[i].op, code[i].r, code[i].l, code[i].m);
 
-// 	return 0;
-// }
+			// STDOUT (-a directive)
+			if (a) printf("%d %d %d %d\n", code[i].op, code[i].r, code[i].l, code[i].m);
+		}
+
+		// Last line:
+		// Write to  file
+		fprintf(out, "%d %d %d %d", code[i].op, code[i].r, code[i].l, code[i].m);
+		
+		// STDOUT (-a directive)
+		if (a) printf("%d %d %d %d\n", code[i].op, code[i].r, code[i].l, code[i].m);
+	}
+
+	// Clean up after yourself ;)
+	destroyList(lexims);
+	destroyString(__content);
+	fclose(out);
+
+	return 0;
+}
