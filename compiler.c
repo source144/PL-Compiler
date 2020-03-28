@@ -551,21 +551,21 @@ void error(node_t *token, char *msg, int e)
 	{
 		if (e == 1)	fprintf(stderr, "Use \"=\" instead of \":=\" (ERR %d)", e);
 		else if (e == 2)	fprintf(stderr, "\"=\" must be followed by a number (ERR %d).\n", e);
-		else if (e == 3)	fprintf(stderr, "Identifier must be followed by = (ERR %d).\n", e);
+		else if (e == 3)	fprintf(stderr, "Identifier must be followed by \"=\" (ERR %d).\n", e);
 		else if (e == 4)	fprintf(stderr, "const, var, procedure must be followed by identifier (ERR %d).\n", e);
-		else if (e == 5)	fprintf(stderr, "Semicolon or comma missing (ERR %d).\n", e);
+		else if (e == 5)	fprintf(stderr, "Semicolon (\";\") or comma (\",\") missing (ERR %d).\n", e);
 		else if (e == 6)	fprintf(stderr, "Incorrect symbol after procedure declaration (ERR %d).\n", e);
 		else if (e == 7)	fprintf(stderr, "Statement expected (ERR %d).\n", e);
 		else if (e == 8)	fprintf(stderr, "Incorrect symbol after statement part in block (ERR %d).\n", e);
 		else if (e == 9)	fprintf(stderr, "Period expected (ERR %d).\n", e);
-		else if (e == 10)	fprintf(stderr, "Semicolon between statements missing (ERR %d).\n", e);
+		else if (e == 10)	fprintf(stderr, "Semicolon (\";\") between statements missing (ERR %d).\n", e);
 		else if (e == 11)	fprintf(stderr, "Undeclared identifier (ERR %d).\n", e);
 		else if (e == 12)	fprintf(stderr, "Assignment to constant or procedure is not allowed (ERR %d).\n", e);
-		else if (e == 13)	fprintf(stderr, "Assignment operator \":=\" expected (ERR %d).\n", e);
+		else if (e == 13)	fprintf(stderr, "Assignment operator (\":=\") expected (ERR %d).\n", e);
 		else if (e == 14)	fprintf(stderr, "call must be followed by an identifier (ERR %d).\n", e);
 		else if (e == 15)	fprintf(stderr, "Call of a constant or variable is meaningless (ERR %d).\n", e);
 		else if (e == 16)	fprintf(stderr, "then expected (ERR %d).\n", e);
-		else if (e == 17)	fprintf(stderr, "Semicolon or \"}\" expected (ERR %d).\n", e);
+		else if (e == 17)	fprintf(stderr, "Semicolon (\";\") or end expected (ERR %d).\n", e);
 		else if (e == 18)	fprintf(stderr, "do expected (ERR %d).\n", e);
 		else if (e == 19)	fprintf(stderr, "Incorrect symbol following statement (ERR %d).\n", e);
 		else if (e == 20)	fprintf(stderr, "Relational operator expecte (ERR %d).\n", e);
@@ -660,6 +660,20 @@ node_t *block(int lvl, int tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, i
 			if (token->token != semicolonsym)
 				error(token, NULL, 5);
 		}
+		else if (token->token == procsym)
+		{
+			do
+			{
+				// Store procedure and expect semicolon
+				// Run procedure block expect semicolon
+				if ((token = procdec(lvl, &tblIdx, &reserve, token, tbl))->token != semicolonsym
+					&& (token = block(lvl + 1, tblIdx, codeIdx, nextToken(token),
+												tbl, code))->token != semicolonsym)
+					error(token, NULL, 17);
+
+				// Run procedure again if needed
+			} while(token->token == procsym);
+		}
 		else
 		{
 			// TODO: error
@@ -689,7 +703,7 @@ node_t *block(int lvl, int tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, i
 
 node_t *constdec(int lvl, int *tblIdx, int *m, node_t *token, symbol_t *tbl)
 {
-	// Unexpected Token
+	// Unexpected Token (expected identifier)
 	if (token->token != identsym)
 		error(token, NULL, 4);
 	
@@ -727,7 +741,7 @@ node_t *constdec(int lvl, int *tblIdx, int *m, node_t *token, symbol_t *tbl)
 
 node_t *vardec(int lvl, int *tblIdx, int *m, node_t *token, symbol_t *tbl)
 {
-		// Unexpected Token
+	// Unexpected Token (expected identifier)
 	if (token->token != identsym)
 		error(token, NULL, 4);
 
@@ -737,18 +751,27 @@ node_t *vardec(int lvl, int *tblIdx, int *m, node_t *token, symbol_t *tbl)
 	return nextToken(token);
 }
 
+node_t *procdec(int lvl, int *tblIdx, int *m, node_t *token, symbol_t *tbl)
+{
+	// Unexpected Token (expected identifier)
+	if (token->token != identsym)
+		error(token, NULL, 4);
+
+	// Insert procedure to symbol table
+	tableInsert(PROC, token->data->charAt, tblIdx, lvl, m, -1, tbl);
+
+	return nextToken(token);
+}
+
 node_t *statement(int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code)
 {
-	int identIdx, thenDoIdx, conditionIdx, val;
+	int identIdx, thenDoIdx, elseDoIdx, conditionIdx, val;
 	
 	switch (token->token)
 	{
 		case identsym:
-			// Lookup identifier
-			identIdx = lookup(token->data->charAt, lvl, tblIdx, tbl);
-
-			// Undeclared identifier
-			if (identIdx == 0)
+			// Lookup identifier && error if undeclared
+			if (!(identIdx = lookup(token->data->charAt, lvl, tblIdx, tbl)))
 				error(token, NULL, 11);
 
 			// Identifier has to be of a VAR
@@ -792,7 +815,7 @@ node_t *statement(int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *t
 				error(token, NULL, 16);
 
 			// Remember where JPC is located in the code
-			thenDoIdx = *codeIdx;
+			elseDoIdx = *codeIdx;
 
 			// Add JPC to the code
 			emitCode(codeIdx, OP_JPC, 0, 0, 0, code);
@@ -800,14 +823,55 @@ node_t *statement(int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *t
 			// Process (then) statement from next token
 			token = statement(lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
 
+			fprintf(stderr, "[AFTER IF STATEMENT] Token: %d - %s\n", token->token, token->data->charAt);
+
+			// ~If-Else statement~
+			if (token->token == elsesym)
+			{
+				// Skip the else statement
+				thenDoIdx = *codeIdx;
+
+				// Add JMP to skip else in case our condition was true
+				emitCode(codeIdx, OP_JMP, 0, 0, 0, code);
+				
+				// If codition is false we add the JMP
+				// to part of our then execution to skip the else
+				code[elseDoIdx].m = *codeIdx;
+
+				// Process (else) statement from next token
+				token = statement(lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
+
+				// Destination to the JMP that skips the 
+				// else's statement that we just made
+				code[thenDoIdx].m = *codeIdx;
+			}
+
+			// ~Simple if statement~
 			// If condition is false, JPC skips the "then" statement(s)
-			code[thenDoIdx].m = *codeIdx;
+			else code[elseDoIdx].m = *codeIdx;
 
 			// NOTE: If there was an else statement
 			// we would add a jmp at the end of the "then" statement(s)
 			// to skip the else statement(s)
 			// and the original JPC would still skip the "then" statement(s)
 			return token;
+		
+		case callsym:
+			if ((token = nextToken(token))->token == identsym)
+			{
+				// Lookup identifier && error if undeclared
+				if (!(identIdx = lookup(token->data->charAt, lvl, tblIdx, tbl)))
+					error(token, NULL, 11);
+
+				// Identifier has to be of a PROC
+				else if (tbl[identIdx].kind != PROC)
+					error(token, NULL, 15);
+
+				// Emit procedure call procedure
+				emitCode(codeIdx, OP_CAL, 0, lvl - tbl[identIdx].level, tbl[identIdx].addr, code);
+			}
+			// Identifier must come after call
+			else error(token, NULL, 14);
 		
 		case whilesym:
 			// Renenber where we evaluate the condition
