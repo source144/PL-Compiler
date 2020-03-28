@@ -10,6 +10,13 @@
 #define MAX_LEXI_LEVELS		13
 #define NUM_REGISTERS		8
 
+// Directives
+#define FLAG		'-'
+#define FLAG_LEX	'l'
+#define FLAG_ASMBLY	'a'
+#define FLAG_VM		'v'
+#define FLAG_OUT	'o'
+
 // Halt Codes
 #define CONTINUE	0
 #define HALT_EXIT	1
