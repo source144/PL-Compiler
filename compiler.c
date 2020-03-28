@@ -25,7 +25,7 @@ string_t *__content;
 #pragma region "Function Prototypes"
 
 long getFileLength(FILE *fp);
-instruction_t *_createInstruction(int op, int r, int l, int m);
+instruction_t *_destroyInstruction(instruction_t *instr);
 int program(list_t *lexims, symbol_t *tbl, instruction_t *code);
 node_t *block(int lvl, int tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code);
 node_t *constdec(int lvl, int *tblIdx, int *m, node_t *token, symbol_t *tbl);
@@ -36,27 +36,6 @@ node_t *expression(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, sym
 node_t *term(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code);
 node_t *factor(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code);
 void emitCode(int *idx, int op, int r, int l, int m, instruction_t *code);
-
-#pragma endregion
-
-#pragma region "Instruction Helper"
-
-// Create a new instruction
-// and returns a pointer to it
-instruction_t *_createInstruction(int op, int r, int l, int m)
-{
-	instruction_t *instr;
-
-	if (!(instr = malloc(sizeof(instruction_t))))
-		return NULL;
-
-	instr->op = op;
-	instr->r = r;
-	instr->l = l;
-	instr->m = m;
-
-	return instr;
-}
 
 #pragma endregion
 
@@ -1306,7 +1285,6 @@ int main(int argc, char *argv[])
 			// STDOUT (-a directive)
 			if (a) printf("%d %d %d %d\n", code[i].op, code[i].r, code[i].l, code[i].m);
 		}
-
 		// Last line:
 		// Write to  file
 		fprintf(out, "%d %d %d %d", code[i].op, code[i].r, code[i].l, code[i].m);
