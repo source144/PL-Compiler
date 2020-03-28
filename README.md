@@ -47,7 +47,7 @@ Furthermore, the **Virtual Machine** supports the following **Directives**:
 
 ### Saving the output
 
-Both of these Directives write to `stdout`, so it's possible to direct the output to using the output redirection operator (**>**). For example:
+Both of these Directives write to `stdout`, so it's possible to direct the output to using the output redirection operator ( **>** ). For example:
 
 `./pvm.exe [INPUT_FILE] -v -a >vmlog.txt` **writes** both the **Decoded Instructions Set** and the **VM State** to *vmlog.txt*. 
 
