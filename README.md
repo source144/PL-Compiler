@@ -67,6 +67,7 @@ Afterwards, run the program with the following line:
 ## Instruction Set Architecture
 
 Each instruction contains **four components**:
+
 (1) **OP** - The operation cod
 
 (2) **R** - Refers to a register
