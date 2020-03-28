@@ -340,7 +340,7 @@ string_t *readSymbol(string_t *content, int *idx, int *ln, int *col, int *lnIdx)
 				--(*col);
 			}
 			else buffer[i++] = content->charAt[*idx];
-			
+
 			// printf("buffer(%d): \"%s\"\n", i, buffer);
 			break;
 	}
@@ -564,13 +564,13 @@ void error(node_t *token, char *msg, int e)
 	}
 
 	// Print Error Header
-	OUT("", "");
-	fprintf(stderr, "INTERRUPTED - ", msg);
+	OUT("%s", "");
+	fprintf(stderr, "INTERRUPTED - %s", msg);
 
 	// Generic Error
 	if (!msg)
 	{
-		if (e == 1)	fprintf(stderr, "Use \"=\" instead of \":=\" (ERR ", "INTERRUPTED - Use \"=\" instead of \":=\"\n", e);
+		if (e == 1)	fprintf(stderr, "Use \"=\" instead of \":=\" (ERR %d)", e);
 		else if (e == 2)	fprintf(stderr, "\"=\" must be followed by a number (ERR %d).\n", e);
 		else if (e == 3)	fprintf(stderr, "Identifier must be followed by = (ERR %d).\n", e);
 		else if (e == 4)	fprintf(stderr, "const, var, procedure must be followed by identifier (ERR %d).\n", e);
@@ -1285,7 +1285,18 @@ int main(int argc, char *argv[])
 	if (numInstrctions > 0)
 	{
 		// Print header (-a directive)
-		if (a) printf("Generated Machine Code for \"%s\":\n", in);
+		if (a) 
+		{
+			// Print Header
+			printf("Generated Machine Code:\n");
+			printf("(\"%s\")\n", in);
+			
+			// Print brackets
+			for (i = -4; i < 0 || in[i]; i++)
+				printf("-");
+
+			printf("\n");
+		}
 
 		for (i = 0; i < numInstrctions - 1; i++)
 		{
