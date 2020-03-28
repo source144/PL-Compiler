@@ -440,34 +440,30 @@ int executeOp(vm_t *vm, int vmFlag)
 		case OP_RIN:
 			if (willOverflowRegister(r))		return HALT_REG;
 
-			// Output to stdout
+
+			// Display promts in stderr
+			fflush(stdin);
+			WARN("%s", "");
+			fprintf(stderr, "Input integer = ");
+
+			// Capture
+			fscanf(stdin, "%d", vm->rf + r);
+			fflush(stdin);
+			fprintf(stderr, "\n");
+
+			// Output to stdout because 
+			// stdout might be directed to a file
 			if (vmFlag)
 			{
 				// Change for print
 				vm->pc--;
 
-				// Prompt and capture
-				OUT("%s", "");
-				fprintf(stdout, "Input integer = ");
-				fscanf(stdin, "%d", vm->rf + r);
-				fflush(stdin);
-				fprintf(stdout, "\n");
-
-				// Print the Instruction
+				// Print out captured value and prompt to stdin
+				OUT("Input integer = %d", vm->rf[r]);
 				printInstruction(vm);
 
 				// Restore PC
 				vm->pc++;
-			}
-
-			// Output to stderr
-			else
-			{
-				WARN("%s", "");
-				fprintf(stderr, "Input integer = ");
-				fscanf(stdin, "%d", vm->rf + r);
-				fflush(stdin);
-				fprintf(stderr, "\n");
 			}
 			break;
 		
@@ -607,68 +603,139 @@ void fetchOp(vm_t *vm, int printFlag)
 	vm->pc++;
 }
 
-void run(instruction_t *code[], int printFlag)
+int main(int argc, char *argv[])
 {
+	int halt, i, a, v, loaded;
+	char *in;
 	vm_t *vm;
-	int halt;
 
-	if (!(vm = initVMWithCode(code)))
-		DIE("%s", "initialization failed (mem allocation)");
+	// Init VM
+	if (!(vm = initVM()))
+		DIE("%s", "\nEXITED - Initialization of VM failed (mem allocation)");
 
-	if (printFlag)
+	// Init to 0 (NULL)
+	loaded = v = a = 0;
+
+	// Process args and directives
+	for (i = 1; i < argc; i++)
 	{
+		// Process Directives
+		if (argv[i][0] == FLAG)
+		{
+			switch (argv[i][1])
+			{
+				// -l  -  Print lexemes (stdout)
+				case FLAG_VM:
+					v = 1;
+					break;
+					
+				// -a  -  Print machinecode (stdout)
+				case FLAG_ASMBLY:
+					a = 1;
+					break;
+
+				default:
+					// Free memory if needed
+					if (vm)
+						destroyVM(vm);
+					// "Supported Dircetives:"
+					// "-v			Prints VM State on each cycle to STDOUT
+					// "-a			Prints Decoded Machine Code Instructions to STDOUT
+					DIE("\nEXITED - Unkown Directive \"%s\"!\n\n%s\n%c%c\t\t%s\n%c%c\t\t%s\n", argv[i],
+						"Supported Dircetives:", FLAG, FLAG_VM, "Prints VM State on each cycle to STDOUT",
+						FLAG, FLAG_ASMBLY, "Prints Decoded Machine Code Instructions to STDOUT");
+					break;
+			}
+		}
+		// Load Machine code to VM and exit if an error occurs
+		else if (!loaded)
+		{
+			// Load Machine code
+			loadFile(in = argv[i], vm->code);
+
+			// Change loaded state to true
+			loaded = 1;
+		}
+	}
+	
+	if (!loaded)
+		DIE("%s", "\nEXITED - Missing Machine Code argument!");
+	
+	// Print Decoded Machine Code 
+	if (a)
+	{
+		// Print Header
+		printf("\nDecoded Machine Instructions:\n");
+		printf("(\"%s\")\n", in);
+		
+		// Print Brackets (-)...
+		for (i = -4; i < 0 || in[i]; i++)
+			printf("-");
+
+		// Print Decoded Instructions
+		printf("\n");
 		printDecodedInstructions(vm);
+		printf("\n");
+	}
+
+	// Print initial VM State
+	if (v)
+	{
+		printf("\nVM State Log:\n");
+		printf("-------------\n");
 		initialPrint(vm);
 	}
 
 	// Run virtual machine
 	do {
 		// Fetch Instruction
-		fetchOp(vm, printFlag);
+		fetchOp(vm, v);
 
 		// Execute
-		halt = executeOp(vm, printFlag);
+		halt = executeOp(vm, v);
 	} while (!halt);
 
 	// Check if exited prematurely
-	if (halt - 1)		printHaltReason(halt);
-	else if (printFlag)	printState(vm);
+	if (halt - 1)	printHaltReason(halt);
+	else if (v) 	printState(vm);
 
 	// Cleanup
 	destroyVM(vm);
+
+	// Exit properly
+	return 0;
 }
 
-// int main(int argc, char *argv[])
+#pragma region "DEPRECATED"
+// // DEPRECATED // //
+// void run(instruction_t *code[], int printFlag)
 // {
 // 	vm_t *vm;
 // 	int halt;
 
-// 	if (argc < 2)
-// 		DIE("%s", "missing input file execution argument");
-
-// 	if (!(vm = initVM()))
+// 	if (!(vm = initVMWithCode(code)))
 // 		DIE("%s", "initialization failed (mem allocation)");
 
-// 	loadFile(argv[1], vm->code);
-// 	printDecodedInstructions(vm);
-// 	initialPrint(vm);
+// 	if (printFlag)
+// 	{
+// 		printDecodedInstructions(vm);
+// 		initialPrint(vm);
+// 	}
 
 // 	// Run virtual machine
 // 	do {
 // 		// Fetch Instruction
-// 		fetchOp(vm, 1);
+// 		fetchOp(vm, printFlag);
 
 // 		// Execute
-// 		halt = executeOp(vm, 1);
+// 		halt = executeOp(vm, printFlag);
 // 	} while (!halt);
 
 // 	// Check if exited prematurely
-// 	if (halt - 1)	printHaltReason(halt);
-// 	else 			printState(vm);
+// 	if (halt - 1)		printHaltReason(halt);
+// 	else if (printFlag)	printState(vm);
 
 // 	// Cleanup
 // 	destroyVM(vm);
-
-// 	// Exit properly
-// 	return 0;
 // }
+#pragma endregion
