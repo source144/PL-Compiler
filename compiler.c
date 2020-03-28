@@ -492,7 +492,7 @@ void process(string_t *content, list_t *leximsList)
 void lineError(char *title, char *msg, int idx, int lineIdx, int lineNum, int colNum)
 {
 	// Specific message and exit
-	OUT("\n%s - %s", title, msg);
+	WARN("\n%s - %s", title, msg);
 	printIndicator(lineIdx, lineNum, colNum);
 	exit(EXIT_FAILURE);
 }
@@ -543,7 +543,7 @@ void error(node_t *token, char *msg, int e)
 	}
 
 	// Print Error Header
-	OUT("%s", "");
+	WARN("%s", "");
 	fprintf(stderr, "INTERRUPTED - %s", msg);
 
 	// Generic Error
