@@ -1268,10 +1268,10 @@ int main(int argc, char *argv[])
 		{
 			// Print Header
 			printf("Generated Machine Code:\n");
-			printf("(\"%s\")\n", in);
+			printf("(\"%s\")\n", o);
 			
 			// Print brackets
-			for (i = -4; i < 0 || in[i]; i++)
+			for (i = -4; i < 0 || o[i]; i++)
 				printf("-");
 
 			printf("\n");
