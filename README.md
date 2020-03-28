@@ -60,37 +60,68 @@ Afterwards, run the program with the following line:
 
 Each instruction contains **four components**:
 (1) **OP** - The operation cod
+
 (2) **R** - Refers to a register
+
 (3) **L** - The lexicographical level or a register in arithmetic and relational instructions
+
 (4) **M** - Depending on the operation, it indicates a **constant**, **program address**, **data address**, or **a register**.
+
 
 ### Available instructions
 
 (1) `lit`  **LIT** - **R, 0, M** - Loads a constant value (literal) **M** into Register **R**
+
 (2) `rtn`  **RTN** 0, **0, 0** - Returns from a subroutine and restore the caller environment
-(3) `lod`  **LOD R, L, M** - Load value into a selected register from the stack location at offset **M** from **L** lexicographical levels down
-(4) `sto`  **STO** - - Store value from a selected register in the stack location at offset **M** from **L** lexicographical levels down
+
+(3) `lod`  **LOD R, L, M** - Load value into a selected register from the stack location at offset **M** from **L** 
+lexicographical levels down
+
+(4) `sto`  **STO** - - Store value from a selected register in the stack location at offset **M** from **L** lexicographical 
+levels down
+
 (5) `cal`  **CAL** - **0, L, M** - Call procedure at code index **M**
-(6) `inc`  **INC** - **0, 0, M** - Allocate **M** locals (increment sp by M). First four are **Functional Value,**  **Static Link (SL)**, **Dynamic Link (DL)**, and **Return Address (RA)**
+
+(6) `inc`  **INC** - **0, 0, M** - Allocate **M** locals (increment sp by M). First four are **Functional Value,**  **Static 
+Link (SL)**, **Dynamic Link (DL)**, and **Return Address (RA)**
+
 (7) `jmp`  **JMP** - **0, 0, M** - Jump to instruction **M**
+
 (8) `jpc`  **JPC** - **R, 0, M** - Jump to instruction **M** if **R** = 0
+
 (9) `out`  **SIO** - **R, 0, 1** - Write a register to the screen
+
 (10) `rin`  **SIO** - **R, 0, 2** - Read in input from the user and store it in a register
+
 (11) `ext`  **SIO** - **0, 0, 3** - End of program (program stops running)
 
+
 #### Arithmetic instructions
+
 (12) `neg` - **NEG** - Reg[**R**] = -Reg[**R**]
+
 (13) `add` - **ADD** - Reg[**R**] = Reg[**L**] + Reg[**M**]
+
 (14) `sub` - **SUB** - Reg[**R**] = Reg[**L**] - Reg[**M**]
+
 (15) `mul` - **MUL** - Reg[**R**] = Reg[**L**] * Reg[**M**]
+
 (16) `div` - **DIV** - Reg[**R**] = Reg[**L**] / Reg[**M**]
+
 (17) `odd` - **ODD** - Reg[**R**] = Reg[**L**] % 2
+
 (18) `mod` - **MOD** - Reg[**R**] = Reg[**L**] % Reg[**M**]
+
 (19) `eql` - **EQL** - Reg[**R**] = Reg[**L**] == Reg[**M**]
+
 (20) `neq` - **NEQ** - Reg[**R**] = Reg[**L**] != Reg[**M**]
+
 (21) `lss` - **LSS** - Reg[**R**] = Reg[**L**] < Reg[**M**]
+
 (22) `leq` - **LEQ** - Reg[**R**] = Reg[**L**] <= Reg[**M**]
+
 (23) `gtr` - **GTR** - Reg[**R**] = Reg[**L**] > Reg[**M**]
+
 (24) `geq` - **GEQ** - Reg[**R**] = Reg[**L**] <= Reg[**M**]
 
   
@@ -113,9 +144,13 @@ An example of that is:
     LINE 15, 14:    factorial = i * factorial;
                               ^
 By default the compiler saves the compiled **machine code** to `a.plmc` *(PLMC stands for PL/0 Machine Code)*.
+
 You can configure the compiler using the following directives:
+
 **-l**  `./compiler.exe [INPUT_FILE] -l`  **prints** the **lexeme** *table and list* produced from the source code.
+
 **-a**  `./compiler.exe [INPUT_FILE] -a` **prints** the **produced Machine Code** (not decoded)
+
 **-o** `./compiler.exe [INPUT_FILE] -o [OUTPUT_FILE]` - Directs the compiler to write the produced machine code to a specific file, which path to is **[OUTPUT_FILE]**.
 
 For example the Following `./compiler.exe -a factorial.plc -o factorial.plmc` will compile the source code file, **factorial.plc**, and save the produced machine code to **factorial.plmc** *as well as* write (**print**) that **machine code** to **STDIN**.
