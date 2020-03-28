@@ -544,7 +544,7 @@ void error(node_t *token, char *msg, int e)
 
 	// Print Error Header
 	WARN("%s", "");
-	fprintf(stderr, "INTERRUPTED - %s", msg);
+	fprintf(stderr, "INTERRUPTED - ");
 
 	// Generic Error
 	if (!msg)
