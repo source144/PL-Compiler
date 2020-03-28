@@ -433,8 +433,14 @@ int executeOp(vm_t *vm, int vmFlag)
 			if (vmFlag) printState(vm);
 
 			// SIO OUT
-			OUT("%d\n", vm->rf[r]);
+			WARN("%d\n", vm->rf[r]);
 			
+			// Output to stdout because 
+			// stdout might be directed to a file
+			if (vmFlag)
+				OUT("%d\n", vm->rf[r]);
+
+
 			return CONTINUE;
 		
 		case OP_RIN:
@@ -459,7 +465,7 @@ int executeOp(vm_t *vm, int vmFlag)
 				vm->pc--;
 
 				// Print out captured value and prompt to stdin
-				OUT("Input integer = %d", vm->rf[r]);
+				OUT("Input integer = %d\n", vm->rf[r]);
 				printInstruction(vm);
 
 				// Restore PC
