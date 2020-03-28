@@ -32,18 +32,26 @@ This machine also has a Register File (**RF**) with eight (8) registers.
 ## Running the VM
 
 To run the **PL/0 VM** you must first compile the **PVM**'s source code to produce an executable.
+
 `gcc pvm.c -o pvm.exe`
 
 Once the code is compiled you are able to run the VM provided a machine code **[INPUT_FILE]** as follows:
+
 `./pvm.exe [INPUT_FILE]`
 
 Furthermore, the **Virtual Machine** supports the following **Directives**:
+
 **-a**  `./pvm.exe [INPUT_FILE] -a`  **prints** the **Decoded Instructions Set**
+
 **-v**  `./pvm.exe [INPUT_FILE] -v`  **prints** the **VM State** on *each cycle*
 
 ### Saving the output
 
-Both of these Directives write to `stdout`, so it's possible to direct the output to using the output redirection operator (**>**). For example: `./pvm.exe [INPUT_FILE] -v -a >vmlog.txt`  **writes** both the **Decoded Instructions Set** and the **VM State** to *vmlog.txt*. Note that you can change *vmlog.txt* to **any filepath** you wish.
+Both of these Directives write to `stdout`, so it's possible to direct the output to using the output redirection operator (**>**). For example:
+
+`./pvm.exe [INPUT_FILE] -v -a >vmlog.txt` **writes** both the **Decoded Instructions Set** and the **VM State** to *vmlog.txt*. 
+
+Note that you can change *vmlog.txt* to **any filepath** you wish.
 
   
 
@@ -159,10 +167,14 @@ For example the Following `./compiler.exe -a factorial.plc -o factorial.plmc` wi
 # Compiling and Running PL/0 Code
 To compile and run a PL/0 source code you have written you must first compile both the PL/0 Virtual Machine and the PL/0 Compiler (instructed previously). Once you have both ready, you can proceed.
 
-Given a written **PL/0 source code** file: `factorial.plc`.
+Given a written **PL/0 source code** file:
+
+`factorial.plc`.
 
 First, compile the source code by running the PL/0 compiler:
+
 `./compiler.exe factorial.plc -o factorial.plmc`
 
 Afterwards, run the produced machine code on the Virtual machine:
+
 `./pvm.exe factorial.plmc`
