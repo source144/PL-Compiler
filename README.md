@@ -33,7 +33,7 @@ This machine also has a Register File (**RF**) with eight (8) registers.
 
 To run the **PL/0 VM** you must first compile the **PVM**'s source code to produce an executable.
 
-`gcc pvm.c -o pvm.exe`
+`gcc -g pvm.c -o pvm.exe`
 
 Once the code is compiled you are able to run the VM provided a machine code **[INPUT_FILE]** as follows:
 
