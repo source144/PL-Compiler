@@ -139,7 +139,10 @@ The PL/0 Compiler consists of a **Scanner** and a **Parser** that both run as pa
 The compiler reads PL/0 **source code** and converts it to **machine code** (an instruction set).
 
 To run the **PL/0 Compiler** you must first compile the **Compiler**'s source code to produce an executable.
-`gcc compiler.c -o compiler.exe`
+
+`gcc -lm -g compiler.c -o compiler.exe`
+
+**NOTE** that we must link C's **math library** by using the **-lm directive**.
 
 Once the code is compiled you are able to run the Compiler provided a PL/0 source code **[INPUT_FILE]** as follows: `./compiler.exe [INPUT_FILE]`
 
