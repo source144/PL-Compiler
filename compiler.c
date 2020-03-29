@@ -2,10 +2,20 @@
 // COP 3402, Spring 2020
 // NID: go658748
 // Version: 03/27/2020 05:36PM
+// Revision 2
 
 // TODO: Organize code
 // TODO: add global buffers (conserve memory and runtime?)
 // TODO: add comments to functions
+
+// TODO: proc call definition
+// TODO: DECLARATION:	proc ident "(" {ident{"," ident"}} ")" ";" block ";"
+// TODO: CALLING:		call ident "(" [ident{"," ident"}] ")" ";"	<-- Parse: count number of args. Code: make a clone of params 
+// TODO: RETURNING		return expression;							<-- evaluate, store in RV in mem
+// TODO: expression can process 
+// TODO: Assignment 	can have procedure.
+// TODO: REG[0] = 0
+// TODO: REG[1] = RV (return value)
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,14 +31,19 @@
 
 // Globally Defined
 string_t *__content;
+node_t *__lastToken;
+int __procArgs = 0;
+int expectSemicolon = 0;
+int expectEnd = 0;
 
 #pragma region "Function Prototypes"
 
 long getFileLength(FILE *fp);
 instruction_t *_destroyInstruction(instruction_t *instr);
 int program(list_t *lexims, symbol_t *tbl, instruction_t *code);
-node_t *block(int lvl, int tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code);
+node_t *block(int lvl, int tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code, int argc);
 node_t *constdec(int lvl, int *tblIdx, int *m, node_t *token, symbol_t *tbl);
+node_t *procdec(int lvl, int *tblIdx, int *m, node_t *token, symbol_t *tbl, int codeIdx);
 node_t *vardec(int lvl, int *tblIdx, int *m, node_t *token, symbol_t *tbl);
 node_t *statement(int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code);
 node_t *condition(int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code);
@@ -557,7 +572,7 @@ void error(node_t *token, char *msg, int e)
 		else if (e == 6)	fprintf(stderr, "Incorrect symbol after procedure declaration (ERR %d).\n", e);
 		else if (e == 7)	fprintf(stderr, "Statement expected (ERR %d).\n", e);
 		else if (e == 8)	fprintf(stderr, "Incorrect symbol after statement part in block (ERR %d).\n", e);
-		else if (e == 9)	fprintf(stderr, "Period expected (ERR %d).\n", e);
+		else if (e == 9)	fprintf(stderr, "Period (\".\") expected (ERR %d).\n", e);
 		else if (e == 10)	fprintf(stderr, "Semicolon (\";\") between statements missing (ERR %d).\n", e);
 		else if (e == 11)	fprintf(stderr, "Undeclared identifier (ERR %d).\n", e);
 		else if (e == 12)	fprintf(stderr, "Assignment to constant or procedure is not allowed (ERR %d).\n", e);
@@ -574,6 +589,8 @@ void error(node_t *token, char *msg, int e)
 		else if (e == 23)	fprintf(stderr, "The preceding factor cannot begin with this symbol (ERR %d).\n", e);
 		else if (e == 24)	fprintf(stderr, "An expression cannot begin with this symbol (ERR %d).\n", e);
 		else if (e == 25)	fprintf(stderr, "This number is too large (ERR %d).\n", e);
+		else if (e == 26)	fprintf(stderr, "procedure argument must be an identifier (ERR %d).\n", e);
+		else if (e == 27)	fprintf(stderr, "Left parenthesis missing (ERR %d).\n", e);
 	}
 	else if (e > 0)	fprintf(stderr, "%s (ERR %d)\n", msg, e);
 	else 			fprintf(stderr, "%s\n", msg);
@@ -590,17 +607,24 @@ node_t *nextToken(node_t *token)
 
 	if (!token->next)
 	{
+		// TODO: send error after last token
 		// Output will look nice if
 		// we exit on missing period
 		token->__col += 3;
 
 		// Missing period token
 		if (token->token == endsym)
-			error(token, NULL, 9);
+		{
+			if (expectSemicolon)	error(token, NULL, 10);
+			else					error(token, NULL, 9);
+		}
 		
 		// End abruptly
 		else error(NULL, "Source code ends abrubtly, expected more tokens", -1);
 	}
+
+	// Update last token;
+	__lastToken = token;
 	
 	return token->next;
 }
@@ -617,16 +641,20 @@ int program(list_t *lexims, symbol_t *tbl, instruction_t *code)
 	node_t *token;
 	int codeIdx = 0;
 
+	// There has to be a period ('.') after a block
 	if ((token = block(0, 0, &codeIdx, lexims->head, tbl, code))->token != periodsym)
+	{
+		printf("From program\n");
 		error(token, NULL, 9);
+	}
 
 	return codeIdx;
 }
 
-node_t *block(int lvl, int tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code)
+node_t *block(int lvl, int tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code, int procIdx)
 {
 	// Block indexes
-	int reserve, initTblIdx, initCodeIdx;
+	int reserve, initTblIdx, initCodeIdx, _procIdx, r;
 
 	if (lvl > MAX_LEXI_LEVELS)
 	{
@@ -634,8 +662,52 @@ node_t *block(int lvl, int tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, i
 	}
 
 	// Prep Jump instruction
-	reserve = 4; //  SP, BP, PC, RV
 	tbl[initTblIdx = tblIdx++].addr = *codeIdx;
+
+	// Memory to reserve
+	reserve = 4; //  RV, SP, BP, PC, ...args...
+
+	// -------------
+	// Procedure block
+	// -------------
+	if (procIdx)
+	{
+		// registers to load from
+		r = REG;
+		
+		// Process optional args
+		if (token->token == identsym)
+		{
+			// TODO: tableInsert() ->  arg name can't be the same as procedure
+
+			// Add first arg
+			tableInsert(VAR, token->data->charAt, tblIdx, lvl, &reserve, -1, tbl);
+			tbl[procIdx]._argc++;
+
+			// store arg from register
+			emitCode(codeIdx, OP_STO, r++, 0, reserve - 1, code);
+
+			// add additional args
+			while ((token = nextToken(token))->token == commasym);
+			{
+				if ((token = nextToken(token))->token != identsym)
+					error(token, NULL, 26);
+
+				// Add arg
+				tableInsert(VAR, token->data->charAt, tblIdx, lvl, &reserve, -1, tbl);
+				tbl[procIdx]._argc++;
+			}
+		}
+
+		// Expect right parenthesis (")")
+		if ((token = nextToken(token))->token != rparentsym)
+			error(token, NULL, 22);
+
+		// Expect semicolon (";")
+		if ((token = nextToken(token))->token != semicolonsym)
+			error(token, NULL, 5);
+
+	}
 
 	// Emit Jump instruction
 	emitCode(codeIdx, OP_JMP, 0, 0 ,0, code);
@@ -647,7 +719,7 @@ node_t *block(int lvl, int tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, i
 			// const declaration
 			do token = nextToken(token);
 			while ((token = constdec(lvl, &tblIdx, &reserve, token, tbl))->token == commasym);
-				
+
 			if (token->token != semicolonsym)
 				error(token, NULL, 5);
 		}
@@ -662,17 +734,26 @@ node_t *block(int lvl, int tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, i
 		}
 		else if (token->token == procsym)
 		{
+			// Store procedure and expect semicolon
+			// Run procedure block expect semicolon
 			do
 			{
-				// Store procedure and expect semicolon
-				// Run procedure block expect semicolon
-				if ((token = procdec(lvl, &tblIdx, &reserve, token, tbl))->token != semicolonsym
-					&& (token = block(lvl + 1, tblIdx, codeIdx, nextToken(token),
-												tbl, code))->token != semicolonsym)
+				// TODO: Jump to skip procedure block
+				if (((token = procdec(lvl, &tblIdx, &reserve, nextToken(token), tbl, *codeIdx))->token) != semicolonsym)
 					error(token, NULL, 17);
 
-				// Run procedure again if needed
-			} while(token->token == procsym);
+				// Set procedure's address (!!)
+				tbl[_procIdx = tblIdx - 1].addr = codeIdx;
+
+				// Procedure block
+				if ((token = block(lvl + 1, tblIdx, codeIdx, nextToken(token), tbl, code, _procIdx))->token != semicolonsym)
+						error(token, NULL, 17);
+
+				// TODO: expect a semicolon ???
+			}
+
+			// Run procedure again if needed
+			 while(token->token == procsym);
 		}
 		else
 		{
@@ -680,7 +761,7 @@ node_t *block(int lvl, int tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, i
 			// TODO:	Unexpected Token
 			error(token, "Unexpected token!", -1);
 		}
-	} while ((token = nextToken(token))->token == constsym || token->token == varsym);
+	} while ((token = nextToken(token))->token == constsym || token->token == varsym || token->token == procsym );
 
 	// Modify jump addresses
 	code[tbl[initTblIdx].addr].m	= *codeIdx;
@@ -689,6 +770,8 @@ node_t *block(int lvl, int tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, i
 	// Emit INC instruction
 	emitCode(codeIdx, OP_INC, 0, 0, reserve, code);
 	
+	printf("Calling statement from LVL = %d\ttoken(%d): %s\n", lvl, token->token, token->data->charAt);
+
 	// Run statements
 	token = statement(lvl, &tblIdx, codeIdx, token, tbl, code);
 
@@ -751,21 +834,29 @@ node_t *vardec(int lvl, int *tblIdx, int *m, node_t *token, symbol_t *tbl)
 	return nextToken(token);
 }
 
-node_t *procdec(int lvl, int *tblIdx, int *m, node_t *token, symbol_t *tbl)
+node_t *procdec(int lvl, int *tblIdx, int *m, node_t *token, symbol_t *tbl, int codeIdx)
 {
+	int procIdx;
+	
 	// Unexpected Token (expected identifier)
 	if (token->token != identsym)
 		error(token, NULL, 4);
 
+	// Expect left parenthesis ("(")
+	if ((token = nextToken(token))->token != lparentsym)
+		error(token, NULL, 27);
+
 	// Insert procedure to symbol table
-	tableInsert(PROC, token->data->charAt, tblIdx, lvl, m, -1, tbl);
+	procIdx = tableInsert(PROC, token->data->charAt, tblIdx, lvl, m, -1, tbl);
 
 	return nextToken(token);
 }
 
 node_t *statement(int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code)
 {
-	int identIdx, thenDoIdx, elseDoIdx, conditionIdx, val;
+	// TODO: statement gets register as argument
+	int identIdx, thenDoIdx, elseDoIdx, conditionIdx, val, r;
+	node_t *_lparenthesis;
 	
 	switch (token->token)
 	{
@@ -774,36 +865,48 @@ node_t *statement(int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *t
 			if (!(identIdx = lookup(token->data->charAt, lvl, tblIdx, tbl)))
 				error(token, NULL, 11);
 
-			// Identifier has to be of a VAR
-			else if (tbl[identIdx].kind != VAR)
-				error(token, NULL, 12);
-
-			// Next token has to be ":=" (Becomes Symbol)
-			if ((token = nextToken(token))->token != becomessym)
-				error(token, NULL, 13);
-
-			// IDENT ":=" EXPRESSION
-			token = expression(0, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
-
-			// Emit STO instruction
-			//! Fix the following:
-			// FIXME: fix L and R of the instruction
-			emitCode(codeIdx, OP_STO, 0, lvl - tbl[identIdx].level, tbl[identIdx].addr, code);
+			// TODO: Call proc
 			
+			if (tbl[identIdx].kind != PROC)
+			{
+				// Identifier has to be of a VAR
+				if (tbl[identIdx].kind != VAR)
+					error(token, NULL, 12);
+
+				// Next token has to be ":=" (Becomes Symbol)
+				if ((token = nextToken(token))->token != becomessym)
+					error(token, NULL, 13);
+
+				// IDENT ":=" EXPRESSION
+				token = expression(REG, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
+
+				// Emit STO instruction
+				//! Fix the following:
+				// FIXME: fix L and R of the instruction
+				emitCode(codeIdx, OP_STO, 0, lvl - tbl[identIdx].level, tbl[identIdx].addr, code);
+			}
+			
+			// This is a procedure call
+			else __call(REG, lvl, tblIdx, codeIdx, token, tbl, code);
+
+			printf("Return from identsym (LVL = %d)\ttoken(%d): %s\n", lvl, token->token, token->data->charAt);
 			// Expression already returns last token
 			return token;
 		
 		case beginsym:
-			token = statement(lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
+			// State
+			expectSemicolon++;
 
-			while (token->token == semicolonsym && (token = nextToken(token))->token != endsym)
-				token = statement(lvl, tblIdx, codeIdx, token, tbl, code);
+			while ((token = nextToken(token))->token != endsym)
+			{
+				if ((token = statement(lvl, tblIdx, codeIdx, token, tbl, code))->token != semicolonsym)
+				{
+					__lastToken->__col += __lastToken->data->length;
+					error(__lastToken, NULL, 10);
+				}
+			}
 
-			// do token = nextToken(token);
-			// while ((token = statement(lvl, tblIdx, codeIdx, token, tbl, code))->token != endsym);
-
-			if (token->token != endsym)
-				error(token, NULL, 17);
+			expectSemicolon--;
 			break;
 		
 		case ifsym:
@@ -823,10 +926,23 @@ node_t *statement(int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *t
 			// Process (then) statement from next token
 			token = statement(lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
 
-			fprintf(stderr, "[AFTER IF STATEMENT] Token: %d - %s\n", token->token, token->data->charAt);
+			// After if statement has to come a semicolon if in begin
+			if (expectSemicolon)
+			{
+				if (token->token != semicolonsym)
+				{
+					__lastToken->__col += __lastToken->data->length;
+					error(__lastToken, NULL, 10);
+				}
+
+				// token = nextToken(token);
+			}
+
+
+			fprintf(stderr, "[AFTER IF STATEMENT] Token(%d, %d): %d - %s\n", token->__line, token->__col, token->token, token->data->charAt);
 
 			// ~If-Else statement~
-			if (token->token == elsesym)
+			if (token->next && token->next->token == elsesym)
 			{
 				// Skip the else statement
 				thenDoIdx = *codeIdx;
@@ -839,7 +955,7 @@ node_t *statement(int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *t
 				code[elseDoIdx].m = *codeIdx;
 
 				// Process (else) statement from next token
-				token = statement(lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
+				token = statement(lvl, tblIdx, codeIdx, nextToken(nextToken(token)), tbl, code);
 
 				// Destination to the JMP that skips the 
 				// else's statement that we just made
@@ -850,6 +966,8 @@ node_t *statement(int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *t
 			// If condition is false, JPC skips the "then" statement(s)
 			else code[elseDoIdx].m = *codeIdx;
 
+			fprintf(stderr, "[AFTER ELSE] Token(%d, %d): %d - %s\n", token->__line, token->__col, token->token, token->data->charAt);
+
 			// NOTE: If there was an else statement
 			// we would add a jmp at the end of the "then" statement(s)
 			// to skip the else statement(s)
@@ -857,8 +975,13 @@ node_t *statement(int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *t
 			return token;
 		
 		case callsym:
+			__call(REG, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
+			// TODO: __call
 			if ((token = nextToken(token))->token == identsym)
 			{
+				// Init reg number
+				r = 0;
+
 				// Lookup identifier && error if undeclared
 				if (!(identIdx = lookup(token->data->charAt, lvl, tblIdx, tbl)))
 					error(token, NULL, 11);
@@ -866,12 +989,65 @@ node_t *statement(int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *t
 				// Identifier has to be of a PROC
 				else if (tbl[identIdx].kind != PROC)
 					error(token, NULL, 15);
+				
+				// Expect lparenthesis 
+				if ((token = _lparenthesis = nextToken(token))->token != lparentsym)
+				{
+					// TODO error - expected left parenthesis ("(")
+				}
+
+				// Process args (expressions)
+				if (token->token == identsym || token->token == numbersym
+					|| token->token == plussym || token->token == minussym)
+				{
+					// STO first argument (expression)
+					token = expression(r++, lvl, tblIdx, codeIdx, token, tbl, code);
+
+					// add additional args
+					while ((token = nextToken(token))->token == commasym);
+					{
+						// Expect another argument (expression)
+						if (token->token == identsym || token->token == numbersym
+							|| token->token == plussym || token->token == minussym)
+						{
+							// TODO: error - expected identity
+						}
+
+						// STO additional argument (expression)
+						token = expression(r++, lvl, tblIdx, codeIdx, token, tbl, code);
+					}
+				}
+
+				// Check number of arguments (r == argc)
+				if (r != tbl[identIdx]._argc)
+				{
+					if (r > tbl[identIdx]._argc)
+						error(_lparenthesis, "Too many arguments for procedure", -1);
+					else error(_lparenthesis, "Missing arguments for procedure", -1);
+				}
+
+				// Expect rparenthesis
+				if ((token = nextToken(token))->token != rparentsym)
+				{
+					// TODO error - expected right parenthesis (")")
+				}
 
 				// Emit procedure call procedure
 				emitCode(codeIdx, OP_CAL, 0, lvl - tbl[identIdx].level, tbl[identIdx].addr, code);
 			}
 			// Identifier must come after call
 			else error(token, NULL, 14);
+
+			break;
+
+		case returnsym:
+			// Set REG[1] (RV - return value) to evaluation of expression
+			token = expression(REG_RV, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
+
+			// TODO: might not need this because block returns at the end
+			// Return from procedure
+			emitCode(codeIdx, OP_RTN, 0, 0 ,0, code);
+			break;
 		
 		case whilesym:
 			// Renenber where we evaluate the condition
@@ -954,16 +1130,43 @@ node_t *statement(int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *t
 			break;
 
 		case semicolonsym:
-			printf("semicolumn\n");
+			printf("\n\nsemicolumn\n\n");
 			break;
 
 		case varsym:
 		case constsym:
-			error(token, "declarations must be made on a block level", -1);
+		case procsym:
+			fprintf(stderr, "[ERR]\n");
+			if (expectEnd)	error(token, NULL, 17);
+			else			error(token, "declarations must be made on a block level", -1);
 
 		default:
-			error(token, "Unexpected token", -1);
+			fprintf(stderr, "[ERR]2\n");
+			// fprintf(stderr, "Token: %d - %s\n", token->token, token->data->charAt);
+			if (expectEnd)	error(token, NULL, 17);
+			else			error(token, "Unexpected token", -1);
 	}
+
+
+	fprintf(stderr, "[END OF STATEMENT] Token(%d, %d): %d - %s\n", token->__line, token->__col, token->token, token->data->charAt);
+	fprintf(stderr, "[END OF STATEMENT] expectSemicolon = %d\n", expectSemicolon);
+
+	// Expecting between statements
+	// if (expectSemicolon)
+	// {
+	// 	// Missing semicolon
+	// 	if (token->next && token->next->token != semicolonsym)
+	// 	{
+	// 		fprintf(stderr, "[END OF STATEMENT] colon isn't next = %d\n", expectSemicolon);
+
+	// 		__lastToken->__col += __lastToken->data->length + 1;
+	// 		error(__lastToken, NULL, 10);
+	// 	}
+
+	// 	// Found semicolon, skip it
+	// 	else token = nextToken(token);
+	// }
+
 	return nextToken(token);
 }
 
@@ -974,7 +1177,7 @@ node_t *condition(int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *t
 	if (token->token == oddsym)
 	{
 		// Process expression from next token
-		token = expression(r = l = 0, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
+		token = expression(r = l = REG, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
 		
 		// Odd: Reg[0] = Reg[0] % 2
 		emitCode(codeIdx, OP_ODD, 0, 0, 0, code);
@@ -982,13 +1185,13 @@ node_t *condition(int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *t
 	else
 	{
 		// Process first expression expression
-		token = expression(r = l = 0, lvl, tblIdx, codeIdx, token, tbl, code);
+		token = expression(r = l = REG, lvl, tblIdx, codeIdx, token, tbl, code);
 
 		// Save the Arithmetic operation
 		whichOp = token->token;
 
 		// Process second expression expression
-		token = expression(m = 1, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);		
+		token = expression(m = REG + 1, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);		
 
 		switch (whichOp)
 		{
@@ -1044,6 +1247,15 @@ node_t *expression(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, sym
 			emitCode(codeIdx, OP_NEG, r, 0, 0, code);
 	}
 	
+	// Expr can't start with symbol err (24), including
+	// procsym because it's going to be detected either way
+	else if (token->token != identsym
+		&& token->token != constsym
+		&& token->token != lparentsym
+		&& token->token != numbersym
+		&& token->token != procsym)
+		error(token, NULL, 24);
+
 	// Otherwise, just process term and get next token
 	else token = term(l = r, lvl, tblIdx, codeIdx, token, tbl, code);
 
@@ -1102,8 +1314,21 @@ node_t *factor(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_
 			if (!(identIdx = lookup(token->data->charAt, lvl, tblIdx, tbl)))
 				error(token, NULL, 11);
 
+			// procedure call
+			if (tbl[identIdx].kind == PROC)
+			{
+				// Call
+				token = __call(r, lvl, tblIdx, codeIdx, token, tbl, code);
+
+				// Set REG[r] to zero (0)
+				emitCode(codeIdx, OP_SUB, r, r, r, code);
+
+				// Load return value from call to REG[r]
+				emitCode(codeIdx, OP_ADD, r, REG_0, REG_RV, code);
+			}
+
 			// const
-			if (tbl[identIdx].kind == CONST)
+			else if (tbl[identIdx].kind == CONST)
 				emitCode(codeIdx, OP_LIT, r, 0, tbl[identIdx].val, code);				
 
 			// var
@@ -1140,6 +1365,74 @@ node_t *factor(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_
 	return nextToken(token);
 }
 
+node_t *__call(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code)
+{
+	node_t *_lparenthesis;
+	int identIdx, numArgs;
+
+	// Call of this token identity
+	if (token->token == identsym)
+	{
+		// Init counter
+		numArgs = 0;
+
+		// Lookup identifier && error if undeclared
+		if (!(identIdx = lookup(token->data->charAt, lvl, tblIdx, tbl)))
+			error(token, NULL, 11);
+
+		// Identifier has to be of a PROC
+		else if (tbl[identIdx].kind != PROC)
+			error(token, NULL, 15);
+		
+		// Expect lparenthesis 
+		if ((token = _lparenthesis = nextToken(token))->token != lparentsym)
+		{
+			// TODO error - expected left parenthesis ("(")
+		}
+
+		// Process args (expressions)
+		if (token->token == identsym || token->token == numbersym
+			|| token->token == plussym || token->token == minussym)
+		{
+			// STO first argument (expression)
+			token = expression(r + numArgs++, lvl, tblIdx, codeIdx, token, tbl, code);
+
+			// add additional args
+			while ((token = nextToken(token))->token == commasym);
+			{
+				// Expect another argument (expression)
+				if (token->token == identsym || token->token == numbersym
+					|| token->token == plussym || token->token == minussym)
+				{
+					// TODO: error - expected identity
+				}
+
+				// STO additional argument (expression)
+				token = expression(r + numArgs++, lvl, tblIdx, codeIdx, token, tbl, code);
+			}
+		}
+
+		// Check number of arguments (r == argc)
+		if (numArgs != tbl[identIdx]._argc)
+		{
+			if (numArgs > tbl[identIdx]._argc)
+				error(_lparenthesis, "Too many arguments for procedure", -1);
+			else error(_lparenthesis, "Missing arguments for procedure", -1);
+		}
+
+		// Expect rparenthesis
+		if ((token = nextToken(token))->token != rparentsym)
+		{
+			// TODO error - expected right parenthesis (")")
+		}
+
+		// Emit procedure call procedure
+		emitCode(codeIdx, OP_CAL, 0, lvl - tbl[identIdx].level, tbl[identIdx].addr, code);
+	}
+	// Identifier must come after call
+	else error(token, NULL, 14);
+}
+
 void emitCode(int *idx, int op, int r, int l, int m, instruction_t *code)
 {
 	if (*idx < MAX_CODE_LENGTH)
@@ -1155,14 +1448,16 @@ void emitCode(int *idx, int op, int r, int l, int m, instruction_t *code)
 	(*idx)++;
 }
 
-void tableInsert(int kind, char *name, int *idx, int lvl, int *addr, int val, symbol_t tbl[MAX_TABLE_SIZE])
+int tableInsert(int kind, char *name, int *idx, int lvl, int *addr, int val, symbol_t tbl[MAX_TABLE_SIZE])
 {
+	int i;
+	
 	// Check if idx overflows symbol table
 	if (*idx >= MAX_TABLE_SIZE)
 		error(NULL, "Exceeded Symbol Table size", -1);
 
 	// Check if identifier already exists in this level
-	if (lookup(name, lvl, idx, tbl))
+	if ((i = lookup(name, lvl, idx, tbl)) && tbl[i].level == lvl)
 		DIE("\nINTERRUPTED - redeclaration of '%s'", name);
 
 	// Set symbol data
@@ -1173,13 +1468,16 @@ void tableInsert(int kind, char *name, int *idx, int lvl, int *addr, int val, sy
 			tbl[*idx].val = val;
 			break;
 
-		// Var
+		// Var and
+		// Procedure
 		case 2:
 			tbl[*idx].addr = (*addr)++;
 			break;
-
-		// Procedure
+			
 		case 3:
+			tbl[*idx].addr = (*addr)++;
+			tbl[*idx]._argc = 0;
+				error(NULL, "Memory Allocation for procedure args failed", -1);
 			break;
 		
 		default:
@@ -1193,8 +1491,8 @@ void tableInsert(int kind, char *name, int *idx, int lvl, int *addr, int val, sy
 	// Set symbol level
 	tbl[*idx].level = lvl;
 
-	// Increment table pointer
-	(*idx)++;
+	// Increment table pointer (and return inserted index)
+	return (*idx)++;
 }
 
 int lookup(char *name, int lvl, int *tblIdx, symbol_t *tbl)
@@ -1209,7 +1507,7 @@ int lookup(char *name, int lvl, int *tblIdx, symbol_t *tbl)
 		lvl = tbl[i].level;
 
 		// Is this the symbol we're looking for
-		if ((tbl[i].kind == CONST || tbl[i].kind == VAR) && strcmp(name, tbl[i].name) == 0)
+		if ((tbl[i].kind == CONST || tbl[i].kind == VAR || tbl[i].kind == PROC) && strcmp(name, tbl[i].name) == 0)
 			return i;
 	}
 
