@@ -9,12 +9,12 @@
 #define MAX_TABLE_SIZE		99
 #define SEPARATOR			'|'
 #define SYMBOLS				";:=+-*/'\",()<>."
-#define NUM_RESERVED		13
+#define NUM_RESERVED		15
 #define REG					2
 #define REG_0				0
 #define REG_RV				1
 
-char RESERVED[14][MAX_IDENT_LEN] = {
+char RESERVED[NUM_RESERVED][MAX_IDENT_LEN] = {
 	"const",
 	"var",
 	"procedure",
@@ -28,7 +28,8 @@ char RESERVED[14][MAX_IDENT_LEN] = {
 	"do",
 	"read",
 	"write",
-	"odd"
+	"odd",
+	"return"
 };
 
 #define CONST		1
@@ -172,6 +173,7 @@ int getReservedToken(int reservedIdx)
 		case 11:	return readsym;
 		case 12:	return writesym;
 		case 13:	return oddsym;
+		case 14:	return returnsym;
 		default:	return -1;
 	}
 }
