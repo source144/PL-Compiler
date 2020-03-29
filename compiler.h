@@ -10,6 +10,9 @@
 #define SEPARATOR			'|'
 #define SYMBOLS				";:=+-*/'\",()<>."
 #define NUM_RESERVED		13
+#define REG					2
+#define REG_0				0
+#define REG_RV				1
 
 char RESERVED[14][MAX_IDENT_LEN] = {
 	"const",
@@ -64,6 +67,8 @@ char RESERVED[14][MAX_IDENT_LEN] = {
 #define writesym		31
 #define readsym			32
 #define elsesym			33
+#define returnsym		34
+
 
 #pragma region "Struct defenitions"
 
@@ -97,6 +102,7 @@ typedef struct
 	int val; 		// number (ASCII value)
 	int level; 		// L level
 	int addr; 		// M address
+	int _argc;		// Number of args expected (procedure)
 } symbol_t;
 
 #pragma endregion
@@ -141,7 +147,7 @@ int numDigits(int n);
 node_t *nextToken(node_t *token);
 
 // Symbol Table Methods
-void tableInsert(int kind, char *name, int *idx, int lvl, int *addr, int val, symbol_t *tbl);
+int tableInsert(int kind, char *name, int *idx, int lvl, int *addr, int val, symbol_t *tbl);
 int lookup(char *name, int lvl, int *tblIdx, symbol_t *tbl);
 
 #pragma endregion
