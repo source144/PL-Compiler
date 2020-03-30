@@ -1037,32 +1037,38 @@ node_t *statement(int procIdx, int lvl, int *tblIdx, int *codeIdx, node_t *token
 			// TODO: write expr !!
 			// TODO: ----------
 
-			// Get next token (Identifier)
-			token = nextToken(token);
+			// Process expression into REG
+			token = expression(procIdx, REG, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
 
-			// Identifier expected
-			if (token->token != identsym)
-				error(token, NULL, 4);
-
-			// Lookup variable and check for Undeclared identifier
-			if (!(identIdx = lookup(token->data->charAt, lvl, tblIdx, tbl)))
-				error(token, NULL, 11);
-			
-			// LOD variable into register
-			if (tbl[identIdx].kind == VAR)
-				emitCode(codeIdx, OP_LOD, REG, lvl - tbl[identIdx].level, tbl[identIdx].addr, code);
-
-			// LIT constant into register
-			else if (tbl[identIdx].kind == CONST)
-				emitCode(codeIdx, OP_LIT, REG, 0, tbl[identIdx].val, code);
-
-			// Expected const or var
-			else
-				error(token, NULL, 21);
-
-			// Output contents of register
+			// Output contents of REG
 			emitCode(codeIdx, OP_OUT, REG, 0, 0, code);
-			break;
+
+			// // Get next token (Identifier)
+			// token = nextToken(token);
+
+			// // Identifier expected
+			// if (token->token != identsym)
+			// 	error(token, NULL, 4);
+
+			// // Lookup variable and check for Undeclared identifier
+			// if (!(identIdx = lookup(token->data->charAt, lvl, tblIdx, tbl)))
+			// 	error(token, NULL, 11);
+			
+			// // LOD variable into register
+			// if (tbl[identIdx].kind == VAR)
+			// 	emitCode(codeIdx, OP_LOD, REG, lvl - tbl[identIdx].level, tbl[identIdx].addr, code);
+
+			// // LIT constant into register
+			// else if (tbl[identIdx].kind == CONST)
+			// 	emitCode(codeIdx, OP_LIT, REG, 0, tbl[identIdx].val, code);
+
+			// // Expected const or var
+			// else
+			// 	error(token, NULL, 21);
+
+			// // Output contents of register
+			// emitCode(codeIdx, OP_OUT, REG, 0, 0, code);
+			return token;
 
 		case semicolonsym:
 			// TODO: use this somehow..
@@ -1218,7 +1224,16 @@ node_t *term(int procIdx, int r, int lvl, int *tblIdx, int *codeIdx, node_t *tok
 
 node_t *factor(int procIdx, int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code)
 {
-	int identIdx, num, stackRV;
+	int identIdx, num, stackRV, doNeg = 0;
+
+	if (token->token == minussym)
+	{
+		doNeg = 1;
+		token = nextToken(token);
+	}
+	else if (token->token == plussym)
+		token = nextToken(token);
+
 
 	switch (token->token)
 	{
@@ -1232,7 +1247,7 @@ node_t *factor(int procIdx, int r, int lvl, int *tblIdx, int *codeIdx, node_t *t
 			{
 				// RV location is frame size + 1. (RV, SP, BP, PC, ...args... | {RV} )
 				// stackRV ..................................................... ^
-				stackRV = procIdx != MAIN ? tbl[procIdx]._argc + FRAME_SIZE + 1 : tbl[procIdx]._argc;
+				stackRV = procIdx != MAIN ? tbl[procIdx]._argc + FRAME_SIZE : tbl[procIdx]._argc;
 
 				// Proceed with call
 				token = __call(r, lvl, tblIdx, codeIdx, token, tbl, code);
@@ -1277,6 +1292,9 @@ node_t *factor(int procIdx, int r, int lvl, int *tblIdx, int *codeIdx, node_t *t
 			error(token, "Expected an identifier/number/expression!", -1);
 			break;
 	}
+	
+	// Negate result of expression if needed
+	if (doNeg)	emitCode(codeIdx, OP_NEG, r, 0, 0, code);
 
 	return nextToken(token);
 }
