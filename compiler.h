@@ -10,9 +10,12 @@
 #define SEPARATOR			'|'
 #define SYMBOLS				";:=+-*/'\",()<>."
 #define NUM_RESERVED		15
-#define REG					2
-#define REG_0				0
-#define REG_RV				1
+#define FRAME_SIZE			4
+#define MAIN				0
+#define CHECK_LINE			1
+
+// Reserve regs before this (0 if not)
+#define REG					0
 
 char RESERVED[NUM_RESERVED][MAX_IDENT_LEN] = {
 	"const",
@@ -146,6 +149,7 @@ void printIndicator(int lineIdx, int lineNum, int colNum);
 void error(node_t *token, char *msg, int e);
 int numDigits(int n);
 node_t *nextToken(node_t *token);
+node_t *alginForError(node_t *token, int checkLine);
 
 // Symbol Table Methods
 int tableInsert(int kind, char *name, int *idx, int lvl, int *addr, int val, symbol_t *tbl);
