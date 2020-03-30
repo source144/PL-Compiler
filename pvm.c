@@ -40,16 +40,19 @@ const char *OPSTRINGS[] = {
 	"LSS",
 	"LEQ",
 	"GTR",
-	"GEQ"
+	"GEQ",
+	"REG_L",
+	"REG_R",
+	"REG_B"
 };
 
 
-#define FORMAT_HDR1(...)		printf("Line   OP   R  L  M\n")
+#define FORMAT_HDR1(...)		printf("Line   OP     R  L  M\n")
 #define FORMAT_HDR2(...)		printf("                      PC   BP    SP    REGISTERS\n")
 #define FORMAT_INIT(...)		printf("Initial values        %-3d   %-2d    %-2d   ", __VA_ARGS__)
 #define FORMAT_DATA(...)		printf("   %-3d   %-2d    %-2d   ", __VA_ARGS__)
-#define FORMAT_INST(...)		printf("%-3d  %-3s  %d  %d  %-3d", __VA_ARGS__)
-#define FORMAT_INST_LNG(...)	printf("%-4d   %-3s  %d  %d  %-3d", __VA_ARGS__)
+#define FORMAT_INST(...)		printf("%-3d  %-6s  %d  %d  %-3d", __VA_ARGS__)
+#define FORMAT_INST_LNG(...)	printf("%-4d   %-5s  %d  %d  %-3d", __VA_ARGS__)
 
 #pragma region "Function Prototypes"
 vm_t *initVMWithCode(instruction_t **code);
@@ -230,7 +233,11 @@ void printStack(vm_t *vm)
 	// Last element
 	if (vm->__AR[j++] == end)
 		printf("|");
-	printf(" %d\n\n", vm->stack[end]);
+	printf(" %d\n", vm->stack[end]);
+
+	printf("_base = %d\n", vm->__baseReg);
+
+	printf("\n");
 }
 
 // Prints the current instruction that
@@ -296,7 +303,7 @@ const char *getOPStr(int opcode)
 	{
 		if (opcode < 9)		return OPSTRINGS[opcode - 1];
 		if (opcode < 12)	return OPSTRINGS[8];
-		if (opcode < 25)	return OPSTRINGS[opcode - 3];
+		if (opcode < 28)	return OPSTRINGS[opcode - 3];
 		else return "ERR";
 	}
 	else return "ERR";
@@ -359,7 +366,28 @@ int executeOp(vm_t *vm, int vmFlag)
 	r = vm->code[vm->ir]->r;
 	l = vm->code[vm->ir]->l;
 	m = vm->code[vm->ir]->m;
+
+	// Adjust base reg dynamically
+	r += vm->__baseReg;
 	
+	if (op == OP_NEG
+		|| op == OP_ADD
+		|| op == OP_SUB
+		|| op == OP_MUL
+		|| op == OP_DIV
+		|| op == OP_ODD
+		|| op == OP_MOD
+		|| op == OP_EQL
+		|| op == OP_NEQ
+		|| op == OP_LSS
+		|| op == OP_LEQ
+		|| op == OP_GTR
+		|| op == OP_GEQ)
+	{
+		l += vm->__baseReg;
+		m += vm->__baseReg;
+	}
+
 	// Exec instruction
 	switch (op)
 	{
@@ -584,7 +612,38 @@ int executeOp(vm_t *vm, int vmFlag)
 			vm->rf[r] = vm->rf[l] >= vm->rf[m];
 			break;
 
-		default: return HALT_OP;
+		// Set base from literal
+		// __baseRegister = m
+		case REG_L:
+			if (willOverflowRegister(m))
+				return HALT_REG;
+			
+			printf("\n*setting base reg to m = %d\n\n", m);
+			vm->__baseReg = m;
+			break;
+
+		// Set base from register
+		// __baseRegister = REG[r]
+		case REG_R:
+			if (willOverflowRegister(r))
+				return HALT_REG;
+			
+			vm->__baseReg = vm->rf[r];
+			break;
+		
+		// Load base to register operation
+		// REG[r] = __baseRegister
+		case REG_B:
+			if (willOverflowRegister(r))
+				return HALT_REG;
+			
+			vm->rf[r] = vm->__baseReg;
+
+			break;
+
+		default:
+			printf("opcode = %d\n", op);
+		return HALT_OP;
 	}
 
 	// Print vm data after execution

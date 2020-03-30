@@ -5,9 +5,9 @@
 
 // Constants
 #define LINE_BUFFER			1024
-#define MAX_STACK_HEIGHT	80
+#define MAX_STACK_HEIGHT	100
 #define MAX_CODE_LENGTH		200
-#define MAX_LEXI_LEVELS		13
+#define MAX_LEXI_LEVELS		30
 #define NUM_REGISTERS		8
 
 // Directives
@@ -54,6 +54,11 @@
 #define OP_GTR	23
 #define OP_GEQ	24
 
+// REG Codes
+#define REG_L 25	// Set by literal
+#define REG_R 26	// Set by reg
+#define REG_B 27	// Load Base to reg
+
 #pragma region "Structs"
 //	ISA 24 Instructions
 //	seperated by spaces
@@ -72,6 +77,7 @@ typedef struct
 	int bp;									// Base Pointer
 	int sp;									// Stack Pointer
 	int pc;									// Program Counter
+	int __baseReg;							// The base register we operate on
 	int __AR_CNT;							// Activation Record count
 	int rf[NUM_REGISTERS];					// Register File
 	int stack[MAX_STACK_HEIGHT];			// The stack of the VM
