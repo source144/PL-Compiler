@@ -45,11 +45,11 @@ node_t *block(int lvl, int tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, i
 node_t *constdec(int lvl, int *tblIdx, int *m, node_t *token, symbol_t *tbl);
 node_t *procdec(int lvl, int *tblIdx, int *m, node_t *token, symbol_t *tbl);
 node_t *vardec(int lvl, int *tblIdx, int *m, node_t *token, symbol_t *tbl);
-node_t *statement(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code);
-node_t *condition(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code);
-node_t *expression(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code);
-node_t *term(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code);
-node_t *factor(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code);
+node_t *statement(int procIdx, int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code);
+node_t *condition(int procIdx, int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code);
+node_t *expression(int procIdx, int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code);
+node_t *term(int procIdx, int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code);
+node_t *factor(int procIdx, int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code);
 node_t *__call(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code);
 void emitCode(int *idx, int op, int r, int l, int m, instruction_t *code);
 
@@ -782,9 +782,11 @@ node_t *block(int lvl, int tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, i
 	
 	// Load args from register
 	if (procIdx)
+	{
 		for (r = 0; r < tbl[procIdx]._argc; r++)
 			emitCode(codeIdx, OP_STO, REG + r, 0, 4 + r, code);
-
+	}
+	else tbl[initTblIdx]._argc = reserve;
 	// if (procIdx)
 	// 	// store arg from register
 	// 	for (r = 0; r < tbl[procIdx]._argc; r++)
@@ -793,7 +795,7 @@ node_t *block(int lvl, int tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, i
 	printf("Calling statement from LVL = %d\ttoken(%d): %s\n", lvl, token->token, token->data->charAt);
 
 	// Run statements
-	token = statement(REG, lvl, &tblIdx, codeIdx, token, tbl, code);
+	token = statement(procIdx ? procIdx : initTblIdx, REG, lvl, &tblIdx, codeIdx, token, tbl, code);
 
 	// If this is our main we exit
 	if (!lvl)	emitCode(codeIdx, OP_EXT, 0, 0, 3, code);
@@ -875,7 +877,7 @@ node_t *procdec(int lvl, int *tblIdx, int *m, node_t *token, symbol_t *tbl)
 	return nextToken(token);
 }
 
-node_t *statement(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code)
+node_t *statement(int procIdx, int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code)
 {
 	// TODO: statement gets register as argument ?? 
 	int identIdx, thenDoIdx, elseDoIdx, conditionIdx, val;
@@ -898,13 +900,14 @@ node_t *statement(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symb
 					error(token, NULL, 13);
 
 				// IDENT ":=" EXPRESSION
-				token = expression(r, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
+				token = expression(procIdx, r, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
 
 				// Emit STO instruction
 				emitCode(codeIdx, OP_STO, REG, lvl - tbl[identIdx].level, tbl[identIdx].addr, code);
 			}
 			
 			// This is a procedure call
+			// TODO: changes procIdx, (calls statements etc with diff procIdx..)
 			else token = __call(REG, lvl, tblIdx, codeIdx, token, tbl, code);
 
 			printf("Return from identsym (LVL = %d)\ttoken(%d): %s\n", lvl, token->token, token->data->charAt);
@@ -918,7 +921,7 @@ node_t *statement(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symb
 			while ((token = nextToken(token))->token != endsym)
 			{
 				printf("[beginsym] token: %s\n", token->data->charAt);
-				if ((token = statement(r, lvl, tblIdx, codeIdx, token, tbl, code))->token != semicolonsym)
+				if ((token = statement(procIdx, r, lvl, tblIdx, codeIdx, token, tbl, code))->token != semicolonsym)
 				{
 					printf("\n\bhere\n\n");
 					__lastToken->__col += __lastToken->data->length;
@@ -931,7 +934,7 @@ node_t *statement(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symb
 		
 		case ifsym:
 			// Process condition from next token
-			token = condition(r, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
+			token = condition(procIdx, r, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
 
 			// Token after condition has to be a "then"
 			if (token->token != thensym)
@@ -944,7 +947,7 @@ node_t *statement(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symb
 			emitCode(codeIdx, OP_JPC, REG, 0, 0, code);
 
 			// Process (then) statement from next token
-			token = statement(r, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
+			token = statement(procIdx, r, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
 
 			// After if statement has to come a semicolon if in begin
 			if (expectSemicolon)
@@ -954,8 +957,6 @@ node_t *statement(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symb
 					__lastToken->__col += __lastToken->data->length;
 					error(__lastToken, NULL, 10);
 				}
-
-				// token = nextToken(token);
 			}
 
 			fprintf(stderr, "[AFTER IF STATEMENT] Token(%d, %d): %d - %s\n", token->__line, token->__col, token->token, token->data->charAt);
@@ -974,7 +975,7 @@ node_t *statement(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symb
 				code[elseDoIdx].m = *codeIdx;
 
 				// Process (else) statement from next token
-				token = statement(r, lvl, tblIdx, codeIdx, nextToken(nextToken(token)), tbl, code);
+				token = statement(procIdx, r, lvl, tblIdx, codeIdx, nextToken(nextToken(token)), tbl, code);
 
 				// Destination to the JMP that skips the 
 				// else's statement that we just made
@@ -993,28 +994,34 @@ node_t *statement(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symb
 			// and the original JPC would still skip the "then" statement(s)
 			return token;
 		
+		// call ident([expr{, expr}])
 		case callsym:
+			// TODO: call calls with different procIdx
 			token = __call(REG, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
 			break;
 
+		// return expr
 		case returnsym:
-			// Set REG[1] (RV - return value) to evaluation of expression
-			token = expression(REG_RV, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
 
-			// // Load procedure call's return value from to REG[r]
-			// emitCode(codeIdx, OP_ADD, REG_RV, REG_0, r, code);
+			// Evaluate expression,
+			// STO (store) result on REG[r]
+			token = expression(procIdx, r, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
 
-			// TODO: might not need this because block returns at the end
-			// Return from procedure
+			// After evaulation,
+			// LOD (load) result from REG[r] to RV of stack frame
+			emitCode(codeIdx, OP_STO, r, 0, 0, code);
+
+			// Return from procedure to caller
 			emitCode(codeIdx, OP_RTN, 0, 0 ,0, code);
-			break;
+			return token;
 		
+		// while condition do statement
 		case whilesym:
 			// Renenber where we evaluate the condition
 			conditionIdx = *codeIdx;
 
 			// Process condition from next token
-			token = condition(r, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
+			token = condition(procIdx, r, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
 
 			// Token after condition has to be a "do"
 			if (token->token != dosym)
@@ -1027,7 +1034,7 @@ node_t *statement(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symb
 			emitCode(codeIdx, OP_JPC, REG, 0, 0, code);
 
 			// Process (do) statement from next token
-			token = statement(r, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
+			token = statement(procIdx, r, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
 
 			// Add a jump back to the condition evaluation of the loop
 			emitCode(codeIdx, OP_JMP, 0, 0, conditionIdx, code);
@@ -1037,6 +1044,7 @@ node_t *statement(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symb
 
 			return token;
 		
+		// read ident
 		case readsym:
 			// Get next token (Identifier)
 			token = nextToken(token);
@@ -1061,7 +1069,13 @@ node_t *statement(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symb
 			emitCode(codeIdx, OP_STO, REG, lvl - tbl[identIdx].level, tbl[identIdx].addr, code);
 			break;
 		
+		// TODO: write expr
 		case writesym:
+			
+			// TODO: ----------
+			// TODO: write expr !!
+			// TODO: ----------
+
 			// Get next token (Identifier)
 			token = nextToken(token);
 
@@ -1090,54 +1104,32 @@ node_t *statement(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symb
 			break;
 
 		case semicolonsym:
+			// TODO: use this somehow..
 			printf("\n\nsemicolumn\n\n");
 			break;
 
 		case varsym:
 		case constsym:
 		case procsym:
-			fprintf(stderr, "[ERR]\n");
 			if (expectEnd)	error(token, NULL, 17);
 			else			error(token, "declarations must be made on a block level", -1);
 
 		default:
-			fprintf(stderr, "[ERR]2\n");
-			// fprintf(stderr, "Token: %d - %s\n", token->token, token->data->charAt);
 			if (expectEnd)	error(token, NULL, 17);
 			else			error(token, "Unexpected token", -1);
 	}
 
-
-	fprintf(stderr, "[END OF STATEMENT] Token(%d, %d): %d - %s\n", token->__line, token->__col, token->token, token->data->charAt);
-	fprintf(stderr, "[END OF STATEMENT] expectSemicolon = %d\n", expectSemicolon);
-
-	// Expecting between statements
-	// if (expectSemicolon)
-	// {
-	// 	// Missing semicolon
-	// 	if (token->next && token->next->token != semicolonsym)
-	// 	{
-	// 		fprintf(stderr, "[END OF STATEMENT] colon isn't next = %d\n", expectSemicolon);
-
-	// 		__lastToken->__col += __lastToken->data->length + 1;
-	// 		error(__lastToken, NULL, 10);
-	// 	}
-
-	// 	// Found semicolon, skip it
-	// 	else token = nextToken(token);
-	// }
-
 	return nextToken(token);
 }
 
-node_t *condition(int r,int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code)
+node_t *condition(int procIdx, int r,int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code)
 {
 	int whichOp, l, m;
 
 	if (token->token == oddsym)
 	{
 		// Process expression from next token
-		token = expression(l = r, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
+		token = expression(procIdx, l = r, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
 		
 		// Odd: Reg[0] = Reg[0] % 2
 		emitCode(codeIdx, OP_ODD, l = r, 0, 0, code);
@@ -1145,13 +1137,13 @@ node_t *condition(int r,int lvl, int *tblIdx, int *codeIdx, node_t *token, symbo
 	else
 	{
 		// Process first expression expression
-		token = expression(l = r, lvl, tblIdx, codeIdx, token, tbl, code);
+		token = expression(procIdx, l = r, lvl, tblIdx, codeIdx, token, tbl, code);
 
 		// Save the Arithmetic operation
 		whichOp = token->token;
 
 		// Process second expression expression
-		token = expression(m = r + 1, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);		
+		token = expression(procIdx, m = r + 1, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);		
 
 		switch (whichOp)
 		{
@@ -1189,7 +1181,7 @@ node_t *condition(int r,int lvl, int *tblIdx, int *codeIdx, node_t *token, symbo
 	return token;
 }
 
-node_t *expression(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code)
+node_t *expression(int procIdx, int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code)
 {
 	int l, m, negate;
 
@@ -1201,7 +1193,7 @@ node_t *expression(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, sym
 	if ((negate = (token->token == minussym)) || token->token == plussym)
 	{
 		// Process term (into register r) and get next token
-		token = term(l = r, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
+		token = term(procIdx, l = r, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
 
 		// Perform negation if needed
 		if (negate)
@@ -1218,12 +1210,12 @@ node_t *expression(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, sym
 		error(token, NULL, 24);
 
 	// Otherwise, just process term and get next token
-	else token = term(l = r, lvl, tblIdx, codeIdx, token, tbl, code);
+	else token = term(procIdx, l = r, lvl, tblIdx, codeIdx, token, tbl, code);
 
 	while ((negate = (token->token == minussym)) || token->token == plussym)
 	{
 		// Process term (into register r + 1) and get next token
-		token = term(m = r + 1, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
+		token = term(procIdx, m = r + 1, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
 		
 		// OP_SUB: Reg[R] = Reg[L] - Reg[M]
 		if (negate)
@@ -1239,19 +1231,19 @@ node_t *expression(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, sym
 	return token;
 }
 
-node_t *term(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code)
+node_t *term(int procIdx, int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code)
 {
 	int l, m, divide;
 	node_t *tmpToken;
 
 	// Process factor (into register r) and get next token
-	token = factor(l = r, lvl, tblIdx, codeIdx, token, tbl, code);
+	token = factor(procIdx, l = r, lvl, tblIdx, codeIdx, token, tbl, code);
 
 	// Factor
 	while ((divide = (token->token == slashsym)) || token->token == multsym)
 	{
 		// Process factor (into register r + 1) and get next token
-		token = factor(m = r + 1, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
+		token = factor(procIdx, m = r + 1, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
 
 		if (divide)
 			emitCode(codeIdx, OP_DIV, r, l, m, code);
@@ -1264,9 +1256,9 @@ node_t *term(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t 
 	return token;
 }
 
-node_t *factor(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code)
+node_t *factor(int procIdx, int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code)
 {
-	int identIdx, num;
+	int identIdx, num, stackRV;
 
 	switch (token->token)
 	{
@@ -1278,11 +1270,15 @@ node_t *factor(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_
 			// procedure call
 			if (tbl[identIdx].kind == PROC)
 			{
-				// Call
+				// RV location is frame size + 1. (RV, SP, BP, PC, ...args... | {RV} )
+				// stackRV ..................................................... ^
+				stackRV = procIdx ? tbl[procIdx]._argc + 5 : tbl[procIdx]._argc;
+
+				// Proceed with call
 				token = __call(r, lvl, tblIdx, codeIdx, token, tbl, code);
 
-				// Load procedure call's return value from to REG[r]
-				emitCode(codeIdx, OP_ADD, r, REG_0, REG_RV, code);
+				// Capture RV from stack and LOD into REG[r] to continue expr
+				emitCode(codeIdx, OP_LOD, r, 0, stackRV, code);
 			}
 
 			// const
@@ -1310,7 +1306,7 @@ node_t *factor(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_
 
 			printf("\n\nWE HAVE A LEFT PARENTHESIS EXPR\n");
 			// Process expression after "(" (Left Parenthesis)
-			token = expression(r, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
+			token = expression(procIdx, r, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
 
 			// Token != ')' - (Right Parenthesis)
 			if (token->token != rparentsym)
@@ -1330,15 +1326,11 @@ node_t *__call(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_
 	node_t *_lparenthesis;
 	int identIdx, numArgs;
 
-	printf("[__call()] token = %s\n", token->data->charAt);
-
 	// Call procedure with the following identitiy identity
 	if (token->token == identsym)
 	{
 		// Init counter
 		numArgs = 0;
-
-		printf("[args] token = %s\n", token->data->charAt);
 
 		// Lookup identifier && error if undeclared
 		if (!(identIdx = lookup(token->data->charAt, lvl, tblIdx, tbl)))
@@ -1359,34 +1351,22 @@ node_t *__call(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_
 			|| token->token == plussym || token->token == minussym
 			|| token->token == lparentsym)
 		{
-			printf("[%s] arg[%d] = %s\n", tbl[identIdx].name, numArgs, token->data->charAt);
-
 			// STO first argument (expression)
-			token = expression(r + numArgs++, lvl, tblIdx, codeIdx, token, tbl, code);
-
-			printf("[%s] after first arg[%d] token = %s\n", tbl[identIdx].name, numArgs, token->data->charAt);
+			token = expression(identIdx, r + numArgs++, lvl, tblIdx, codeIdx, token, tbl, code);
 
 			// add additional args
 			while (token->token == commasym)
-			{
-				printf("[%s] arg[%d] = %s\n", tbl[identIdx].name, numArgs, token->data->charAt);
-
 				// STO additional argument (expression)
-				token = expression(r + numArgs++, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
-			}
+				token = expression(identIdx, r + numArgs++, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
 		}
 
 		// Check number of arguments (r == argc)
 		if (numArgs != tbl[identIdx]._argc)
 		{
-			printf("[args] num args = %d\n", numArgs);
-			
 			if (numArgs > tbl[identIdx]._argc)
 				error(_lparenthesis, "Too many arguments for procedure", -1);
 			else error(_lparenthesis, "Missing arguments for procedure", -1);
 		}
-
-		printf("[%s] arg[%d] token(%d)= %s\n", tbl[identIdx].name, numArgs, token->token, token->data->charAt);
 
 		// Expect rparenthesis
 		if (token->token != rparentsym)
