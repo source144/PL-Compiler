@@ -52,16 +52,16 @@ PL/0 VM: 731		# = 731
 ### The EBNF  of PL/0:
 
     // Base
-    (1) program	:=	block ".".
-    (2) block	:=	{ constdec | vardec | procdec } statement.
+    (1) program         :=	block ".".
+    (2) block           :=	{ constdec | vardec | procdec } statement.
     
     // Declarations
-    (3) constdec:=	"const" ident "=" number {"," ident "=" number } ";".
-    (4) vardec	:=	"var" ident {"," ident } ";".
-    (5) procdec		:=	procedure ident "(" [ ident {"," ident}] ");" block ";".
+    (3) constdec        :=	"const" ident "=" number {"," ident "=" number } ";".
+    (4) vardec          :=	"var" ident {"," ident } ";".
+    (5) procdec         :=	procedure ident "(" [ ident {"," ident}] ");" block ";".
     
     // Statements
-    (6) statement	:=	[
+    (6) statement       :=	[
 					ident ":=" expression
 					| [ "call" ] ident "(" [ expression {"," expression } ");"
 					| "begin" { statement ";" } "end"
@@ -74,16 +74,16 @@ PL/0 VM: 731		# = 731
 				] .
 	
 	// Conditions and expressions
-	(7) condition	:=	"odd" expression
+	(7) condition:=	"odd" expression
 				| expression rel-op expression.
-	(8) rel-op	:=	"=" | "<>" | "<" | ">" | "<=" | ">=".
-	(9) expression	:=	["+" | "-"] term { ("+" | "-") term }.
-	(10) term	:=	factor { ("*" | "/" ) factor }.
-	(11) factor	:=	ident | number | "(" expression ")".
-	(12) number	:=	digit { digit }.
-	(13) ident	:=	letter { letter | digit }
-	(14) digit	:=	"0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9".
-	(15) letter	:=	"a" | "b" | ... | "y" | "z" | "A" | "B" | ... | "Y" | "Z".
+	(8) rel-op      :=	"=" | "<>" | "<" | ">" | "<=" | ">=".
+	(9) expression  :=	["+" | "-"] term { ("+" | "-") term }.
+	(10) term       :=	factor { ("*" | "/" ) factor }.
+	(11) factor     :=	ident | number | "(" expression ")".
+	(12) number     :=	digit { digit }.
+	(13) ident      :=	letter { letter | digit }
+	(14) digit      :=	"0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9".
+	(15) letter     :=	"a" | "b" | ... | "y" | "z" | "A" | "B" | ... | "Y" | "Z".
 
 	
 	// NOTE:
