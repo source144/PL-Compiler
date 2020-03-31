@@ -41,10 +41,10 @@ Given an input of **3**, the output of this program (`.\pvm.exe a.plmc`) is:
 $ ./pvm.exe a.plmc
 PL/0 VM: 
 Input integer = 3
-					# 3! + 5 + ((3 * (2/2))!)!
-					# 6 + 5 + ((3 * 1)!)!
-					# 11 + (6)!
-					# 11 + 720
+			# 3! + 5 + ((3 * (2/2))!)!
+			# 6 + 5 + ((3 * 1)!)!
+			# 11 + (6)!
+			# 11 + 720
 PL/0 VM: 731		# = 731
 ```
 
@@ -62,28 +62,28 @@ PL/0 VM: 731		# = 731
     
     // Statements
     (6) statement	:=	[
-						    ident ":=" expression
-						    | [ "call" ] ident "(" [ expression {"," expression } ");"
-						    | "begin" { statement ";" } "end"
-						    | "if" condition "then" statement [ ";" "else" statement ]
-						    | "while" condition "do" statement
-						    | "read" ident
-						    | "write" expression
-						    | "return expression
-						    | ε
-						] .
+					ident ":=" expression
+					| [ "call" ] ident "(" [ expression {"," expression } ");"
+					| "begin" { statement ";" } "end"
+					| "if" condition "then" statement [ ";" "else" statement ]
+					| "while" condition "do" statement
+					| "read" ident
+					| "write" expression
+					| "return expression
+					| ε
+				] .
 	
 	// Conditions and expressions
 	(7) condition	:=	"odd" expression
-						| expression rel-op expression.
-	(8) rel-op		:= "=" | "<>" | "<" | ">" | "<=" | ">=".
-	(9) expression	:= ["+" | "-"] term { ("+" | "-") term }.
-	(10) term		:= factor { ("*" | "/" ) factor }.
-	(11) factor		:= ident | number | "(" expression ")".
-	(12) number		:= digit { digit }.
-	(13) ident		:= letter { letter | digit }
-	(14) digit		:= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9".
-	(15) letter		:= "a" | "b" | ... | "y" | "z" | "A" | "B" | ... | "Y" | "Z".
+				| expression rel-op expression.
+	(8) rel-op	:=	"=" | "<>" | "<" | ">" | "<=" | ">=".
+	(9) expression	:=	["+" | "-"] term { ("+" | "-") term }.
+	(10) term	:=	factor { ("*" | "/" ) factor }.
+	(11) factor	:=	ident | number | "(" expression ")".
+	(12) number	:=	digit { digit }.
+	(13) ident	:=	letter { letter | digit }
+	(14) digit	:=	"0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9".
+	(15) letter	:=	"a" | "b" | ... | "y" | "z" | "A" | "B" | ... | "Y" | "Z".
 
 	
 	// NOTE:
