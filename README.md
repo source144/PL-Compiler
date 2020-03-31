@@ -747,3 +747,44 @@ PL/0 VM: 120
 42   SIO     0  0  3     43    1     6    120  0  120  24  2  24  6  5  6  2  8  2  1  11  1  2  1  0  0  0
 Stack: 0  0  0  0  5  0
 ```
+
+
+# Known Issues  
+There are a couple of issues with global variables and variable scopes that have to be defined and addressed.  
+As of now, global variables are **NOT** supported by the compiler. While they are acceptable, they produce undefined behavior.  
+
+Variables you wish to use in procedures must be passed as arguments.  
+The arguments themselves are evaluations of expressions, variable are **passed by value** and not by reference.  
+
+Given the following `program.plc`:  
+```javascript
+var n;
+procedure fact(n);
+	begin
+		if n < 0 then return -1;
+		if n < 2 then return 1;
+
+		return fact(n - 1) * n;
+	end;
+
+procedure abs(n);
+	begin
+		if n < 0 then return -n;
+		return n;
+	end;
+
+begin
+	read n;
+	write fact(abs(n)) + 5 + fact(n);
+end.
+```
+
+This error would appear:  
+```java
+$ ./compiler.exe demo/prog01.plc
+PL/0 COMPILER: 
+INTERRUPTED - redeclaration of n
+LINE 10, 15: procedure abs(n);
+                           ^
+```  
+Changing the argument name _(and preceding references)_ to 'k' _(or any other identifier)_ would allow the file to compile.  
