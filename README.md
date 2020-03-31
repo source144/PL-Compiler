@@ -172,8 +172,8 @@ Each instruction contains **four components**:
 
 #### Register Instructions  
 (12) `reg_l` - **REG_L** - **0, 0, M** - **RP** += **M** ------------_(Register Pointer **M** levels "deeper")_  
-(13) `reg_r` - **REG_R** - **0, 0, 0**  - **RP** = Reg[**RP** - 1] ---_(Register Pointer 1 level "higher")_  
-(14) `reg_b` - **REG_B** - **R, 0, 0**  - Reg[**R**] = **RP** --------_(LODs Register Pointer into Reg[**R**])_  
+(13) `reg_r` - **REG_R** - **0, 0, 0** - **RP** = Reg[**RP** - 1] ----_(Register Pointer 1 level "higher")_  
+(14) `reg_b` - **REG_B** - **R, 0, 0** - Reg[**R**] = **RP** ---------_(LODs Register Pointer into Reg[**R**])_  
   
 # The PL/0 Compiler  
 The PL/0 Compiler consists of a **Scanner** and a **Parser** that both run as part of the compilation process.The compiler reads PL/0 **source code** and converts it to **machine code** (an instruction set).  
