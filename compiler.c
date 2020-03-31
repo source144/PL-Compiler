@@ -37,6 +37,7 @@ int expectSemicolon = 0;
 
 #pragma region "Function Prototypes"
 
+void __redeclarationError(char *name);
 long getFileLength(FILE *fp);
 instruction_t *_destroyInstruction(instruction_t *instr);
 int program(list_t *lexims, symbol_t *tbl, instruction_t *code);
@@ -1399,6 +1400,22 @@ void emitCode(int *idx, int op, int r, int l, int m, instruction_t *code)
 	(*idx)++;
 }
 
+void __redeclarationError(char *name)
+{
+	// Buffer
+	int _len = strlen(REDECLARATION);
+	char buf[_len + MAX_IDENT_LEN + 1];
+
+	// Append name to redeclaration error message
+	sprintf(buf, REDECLARATION "%s", name);
+
+	// Make sure buf is terminated
+	buf[_len + MAX_IDENT_LEN] = '\0';
+
+	// Throw nicely formatted error
+	error(__lastToken->next, buf, -1);
+}
+
 int tableInsert(int kind, char *name, int *idx, int lvl, int *addr, int val, symbol_t tbl[MAX_TABLE_SIZE])
 {
 	int i;
@@ -1409,7 +1426,8 @@ int tableInsert(int kind, char *name, int *idx, int lvl, int *addr, int val, sym
 
 	// Check if identifier already exists in this level
 	if ((i = lookup(name, lvl, idx, tbl)) && tbl[i].level == lvl)
-		DIE("\nINTERRUPTED - redeclaration of '%s'", name);
+		__redeclarationError(name);
+		// DIE("\nINTERRUPTED - redeclaration of '%s'", name);
 
 	// Set symbol data
 	switch ((tbl[*idx].kind = kind))

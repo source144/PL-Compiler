@@ -19,6 +19,8 @@
 #define MAIN				0
 #define CHECK_LINE			1
 
+#define REDECLARATION		"redeclaration of "
+
 // Reserve regs before this (0 if not)
 #define REG					0
 
@@ -149,12 +151,15 @@ void printLeximList(list_t *leximList);
 void process(string_t *content, list_t *leximsList);
 
 // Parser Helpers
-void lineError(char *title, char *msg, int idx, int lineIdx, int lineNum, int colNum);
-void printIndicator(int lineIdx, int lineNum, int colNum);
-void error(node_t *token, char *msg, int e);
 int numDigits(int n);
 node_t *nextToken(node_t *token);
+
+// Error Formatting Helpers
 node_t *alginForError(node_t *token, int checkLine);
+void lineError(char *title, char *msg, int idx, int lineIdx, int lineNum, int colNum);
+void __redeclarationError(char *name);
+void printIndicator(int lineIdx, int lineNum, int colNum);
+void error(node_t *token, char *msg, int e);
 
 // Symbol Table Methods
 int tableInsert(int kind, char *name, int *idx, int lvl, int *addr, int val, symbol_t *tbl);
