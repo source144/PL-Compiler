@@ -62,16 +62,16 @@ PL/0 VM: 731		# = 731
     
     // Statements
     (6) statement   :=	[
-				ident ":=" expression
-				| [ "call" ] ident "(" [ expression {"," expression } ");"
-				| "begin" { statement ";" } "end"
-				| "if" condition "then" statement [ ";" "else" statement ]
-				| "while" condition "do" statement
-				| "read" ident
-				| "write" expression
-				| "return expression
-				| ε
-			] .
+					ident ":=" expression
+					| [ "call" ] ident "(" [ expression {"," expression } ");"
+					| "begin" { statement ";" } "end"
+					| "if" condition "then" statement [ ";" "else" statement ]
+					| "while" condition "do" statement
+					| "read" ident
+					| "write" expression
+					| "return expression
+					| ε
+				] .
 	
 	// Conditions and expressions
 	(7) condition   :=	"odd" expression
