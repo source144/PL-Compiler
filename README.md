@@ -96,8 +96,7 @@ PL/0 VM: 731		# = 731
 1. The **stack**, which contains **data** to be used by the PM/0 CPU.  
 2. The **Code** (or "text"), which contains **instructions** for the VM.    
 
-It has **five** registers to handle the stack and the code/text segments.    
-
+It has **five** registers to handle the stack and the code/text segments.  
 1.  **BP** - Base Pointer  
 2.  **SP** - Stack Pointer  
 3.  **PC** - Program Counter  
@@ -130,14 +129,6 @@ Compile the source code with the following:
 `gcc -g pvm.c -o pvm.exe`
 
 Afterwards, run the program with the following line:  
-`valgrind --leak-check=full ./pvm.exe [INPUT_FILE]`
-
-**Compile** the source code with the following:
-
-`gcc -g pvm.c -o pvm.exe`
-
-Afterwards, **run** the program with the following line:
-
 `valgrind --leak-check=full ./pvm.exe [INPUT_FILE]`
     
 ## Instruction Set Architecture  
@@ -180,22 +171,20 @@ Each instruction contains **four components**:
   
 
 #### Register Instructions
-(25) `reg_l`  **REG_L** - **0, 0, M** - Makes Register Pointer _(**RP**)_ **M** levels "deeper"   
-(26) `reg_r`  **REG_R** - **0, 0, 0** - Moves Register Pointer _(**RP**)_ "one level higher"
-(27) `reg_b`  **REG_B** - **R, 0, 0** - Reg[**R**] = _**RP**_ ---_(E.g. loads current **RP** (**value**) into Reg[**R**])_
+(25) `reg_l`  **REG_L** - **0, 0, M** - Makes Register Pointer _(**RP**)_ **M** levels "deeper" 
+(26) `reg_r`  **REG_R** - **0, 0, 0** - Moves Register Pointer _(**RP**)_ "one level higher"  
+(27) `reg_b`  **REG_B** - **R, 0, 0** - Reg[**R**] = _**RP**_ ---_(E.g. loads current **RP** (**value**) into Reg[**R**])_  
   
-# The PL/0 Compiler
-The PL/0 Compiler consists of a **Scanner** and a **Parser** that both run as part of the compilation process.The compiler reads PL/0 **source code** and converts it to **machine code** (an instruction set).
-  
+# The PL/0 Compiler  
+The PL/0 Compiler consists of a **Scanner** and a **Parser** that both run as part of the compilation process.The compiler reads PL/0 **source code** and converts it to **machine code** (an instruction set).  
 To run the **PL/0 Compiler** you must first compile the **Compiler**'s source code to produce an executable.  
 `gcc -lm -g compiler.c -o compiler.exe`  
 _**NOTE** that we must link C's **math library** by using the **-lm directive**_.  
 
-Once the code is compiled you are able to run the Compiler provided a PL/0 source code **[INPUT_FILE]** as follows: `./compiler.exe [INPUT_FILE]`  
+Once the code is compiled you are able to run the Compiler provided a PL/0 source code **[INPUT_FILE]** as follows:  
+`./compiler.exe [INPUT_FILE]`  
 
-The compiler will output and explain any error that occurs during the compilation process.
-An example of that is:
-
+The compiler will output and explain any error that occurs during the compilation process.  
 ```bash  
 $ ./compile.exe codes/while05.txt -o compiled_factorial.plmc
 PL/0 COMPILER:
@@ -203,6 +192,7 @@ INTERRUPTED - Assignment operator ":=" expected (ERR 13).
 LINE 15, 14: factorial = i * factorial;
                        ^
 ```
+
 By default the compiler saves the compiled **machine code** to `a.plmc`  *(PLMC stands for PL/0 Machine Code)*.
   
 You can configure the compiler using the following directives:  
@@ -212,12 +202,11 @@ You can configure the compiler using the following directives:
 
 For example the Following `./compiler.exe -a factorial.plc -o factorial.plmc` will compile the source code file, **factorial.plc**, and save the produced machine code to **factorial.plmc**  *as well as* write (**print**) that **machine code** to **STDIN**.    
 
-# Compiling and Running PL/0 Code
-**NOTE:** You must first compile both the PL/0 Virtual Machine and the PL/0 Compiler (instructed previously).
-Given a **PL/0 source code** file `factorial.plc`, we can compile and run it on the VM by following these steps:
-
-1. Compile the source code: `./compiler.exe factorial.plc -o factorial.plmc`
-2. Run the produced machine code on the VM: `./pvm.exe factorial.plmc`
+# Compiling and Running PL/0 Code  
+Given a **PL/0 source code** file `factorial.plc`, we can compile and run it on the VM by following these steps:  
+1. Compile the source code: `./compiler.exe factorial.plc -o factorial.plmc`  
+2. Run the produced machine code on the VM: `./pvm.exe factorial.plmc`  
+**NOTE:** You must first compile both the PL/0 Virtual Machine and the PL/0 Compiler (instructed previously).  
 
 The `factorial.plc` file:
 ```javascript
