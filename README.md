@@ -41,11 +41,11 @@ Given an input of **3**, the output of this program (`.\pvm.exe a.plmc`) is:
 $ ./pvm.exe a.plmc
 PL/0 VM: 
 Input integer = 3
-					// 3! + 5 + ((3 * (2/2))!)!
-					// 6 + 5 + ((3 * 1)!)!
-					// 11 + (6)!
-					// 11 + 720
-PL/0 VM: 731		// = 731
+					# 3! + 5 + ((3 * (2/2))!)!
+					# 6 + 5 + ((3 * 1)!)!
+					# 11 + (6)!
+					# 11 + 720
+PL/0 VM: 731		# = 731
 ```
 
 ---
