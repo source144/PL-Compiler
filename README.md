@@ -53,7 +53,7 @@ PL/0 VM: 731		# = 731
 
     // Base
     (1) program		:=	block ".".
-    (2) block		:=	{ constdec | vardec | procdec } statement.
+    (2) block	:=	{ constdec | vardec | procdec } statement.
     
     // Declarations
     (3) constdec	:=	"const" ident "=" number {"," ident "=" number } ";".
