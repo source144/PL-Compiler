@@ -1,0 +1,9 @@
+var x, w;
+begin
+   read w;
+   x:= 4;
+   if w > x then
+	w:= w + 5;
+   write w;
+   write x;
+end.

@@ -12,7 +12,7 @@ begin
 	begin
 		while i <= n do 
 		begin
-			factorial := i * factorial;
+			factorial = i * factorial;
 			i := i + 1;
 		end;
 		write factorial;

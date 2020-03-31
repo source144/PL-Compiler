@@ -1,0 +1,16 @@
+const success = 1, error = 0;
+var a;
+begin
+	if error > success then
+		begin
+			a := 5;
+			write a;
+		end;
+	else begin
+		a := 10;
+		write a;
+	end;
+end.
+/*begin
+end.*/
+/* Require every method to end with ; */

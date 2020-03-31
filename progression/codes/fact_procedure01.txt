@@ -1,0 +1,16 @@
+var n, res;
+procedure fact(n);
+	var tmp;
+	begin
+		if n < 0 then return -1;;
+		if n < 2 then return 1;;
+
+		tmp := fact(n - 1);
+
+		return n * tmp;;
+	end;
+begin
+	read n;
+	res := fact(n);
+	write res;
+end.

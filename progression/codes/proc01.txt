@@ -1,0 +1,17 @@
+var f, n;
+procedure doThing();
+	var a, x, y;
+	procedure doOther();
+		var g;
+		begin
+			read g;
+			write g;
+		end;
+	begin
+		write a;
+	end;
+
+begin
+	read n;
+	doThing();
+end.

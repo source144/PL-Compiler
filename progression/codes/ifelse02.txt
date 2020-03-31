@@ -1,0 +1,11 @@
+const success = 1, error = 0;
+begin
+	if success < error then write error;
+	else write success;
+
+	/*success := 2;*/
+/*
+	if success > error then write success
+	else write error
+*/
+end.

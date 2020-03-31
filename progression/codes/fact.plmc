@@ -1,0 +1,11 @@
+var n;
+procedure fact(n);
+	begin
+		if n < 0 then return -1;	/* -1 represents an error */
+		if n < 2 then return 1;		/* 0! = 1! = 1 */
+		return n * fact(n - 1);		/* n * (n - 1)! */
+	end;
+begin
+	read n;
+	write fact(n);
+end.
