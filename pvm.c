@@ -612,33 +612,33 @@ int executeOp(vm_t *vm, int vmFlag)
 			vm->rf[r] = vm->rf[l] >= vm->rf[m];
 			break;
 
-		// Set base from literal
-		// __baseRegister = m
+		// Set base register from literal
 		case REG_L:
 			if (willOverflowRegister(m))
 				return HALT_REG;
-			
-			printf("\n*setting base reg to m = %d\n\n", m);
-			vm->__baseReg = m;
+
+			// __baseRegister = m + __baseRegister
+			vm->__baseReg = m + vm->__baseReg;
 			break;
 
-		// Set base from register
-		// __baseRegister = REG[r]
+		// Set base from register to the
+		// previous base register (0 if none)
+		// TODO: throw error if no previous base register?
 		case REG_R:
 			if (willOverflowRegister(r))
 				return HALT_REG;
 			
-			vm->__baseReg = vm->rf[r];
+			// __baseRegister = REG[__baseRegister - 1] (or 0 if no previous)
+			vm->__baseReg = vm->__baseReg ? vm->rf[vm->__baseReg - 1] : 0;
 			break;
 		
 		// Load base to register operation
-		// REG[r] = __baseRegister
 		case REG_B:
 			if (willOverflowRegister(r))
 				return HALT_REG;
 			
+			// REG[r] = __baseRegister
 			vm->rf[r] = vm->__baseReg;
-
 			break;
 
 		default:

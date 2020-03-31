@@ -8,7 +8,7 @@
 #define MAX_STACK_HEIGHT	100
 #define MAX_CODE_LENGTH		200
 #define MAX_LEXI_LEVELS		30
-#define NUM_REGISTERS		8
+#define NUM_REGISTERS		20
 
 // Directives
 #define FLAG		'-'
