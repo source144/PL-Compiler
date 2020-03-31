@@ -37,14 +37,14 @@ end.
 ```
 
 Given an input of **3**, the output of this program (`.\pvm.exe a.plmc`) is:
-```console
+```java
 $ ./pvm.exe a.plmc
 PL/0 VM: 
 Input integer = 3
-					// 3! + 5 + ((3 * (2/2))!)!
-					// 6 + 5 + ((3 * 1)!)!
-					// 11 + (6)!
-					// 11 + 720
+			// 3! + 5 + ((3 * (2/2))!)!
+			// 6 + 5 + ((3 * 1)!)!
+			// 11 + (6)!
+			// 11 + 720
 PL/0 VM: 731		// = 731
 ```
 
@@ -52,81 +52,84 @@ PL/0 VM: 731		// = 731
 ### The EBNF  of PL/0:
 
     // Base
-    (1) program		:=	block ".".
-    (2) block		:=	{ constdec | vardec | procdec } statement.
+    (1) program     :=	block ".".
+    (2) block       :=	{ constdec | vardec | procdec } statement.
     
     // Declarations
-    (3) constdec	:=	"const" ident "=" number {"," ident "=" number } ";".
-    (4) vardec		:=	"var" ident {"," ident } ";".
-    (5) procdec		:=	procedure ident "(" [ ident {"," ident}] ");" block ";".
+    (3) constdec    :=	"const" ident "=" number {"," ident "=" number } ";".
+    (4) vardec      :=	"var" ident {"," ident } ";".
+    (5) procdec     :=	procedure ident "(" [ ident {"," ident}] ");" block ";".
     
     // Statements
-    (6) statement	:=	[
-						    ident ":=" expression
-						    | [ "call" ] ident "(" [ expression {"," expression } ");"
-						    | "begin" { statement ";" } "end"
-						    | "if" condition "then" statement [ ";" "else" statement ]
-						    | "while" condition "do" statement
-						    | "read" ident
-						    | "write" expression
-						    | "return expression
-						    | ε
-						] .
+    (6) statement   :=	[
+					ident ":=" expression
+					| [ "call" ] ident "(" [ expression {"," expression } ");"
+					| "begin" { statement ";" } "end"
+					| "if" condition "then" statement [ ";" "else" statement ]
+					| "while" condition "do" statement
+					| "read" ident
+					| "write" expression
+					| "return expression
+					| ε
+				] .
 	
 	// Conditions and expressions
-	(7) condition	:=	"odd" expression
-						| expression rel-op expression.
-	(8) rel-op		:= "=" | "<>" | "<" | ">" | "<=" | ">=".
-	(9) expression	:= ["+" | "-"] term { ("+" | "-") term }.
-	(10) term		:= factor { ("*" | "/" ) factor }.
-	(11) factor		:= ident | number | "(" expression ")".
-	(12) number		:= digit { digit }.
-	(13) ident		:= letter { letter | digit }
-	(14) digit		:= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9".
-	(15) letter		:= "a" | "b" | ... | "y" | "z" | "A" | "B" | ... | "Y" | "Z".
+	(7) condition   :=	"odd" expression
+				| expression rel-op expression.
+	(8) rel-op      :=	"=" | "<>" | "<" | ">" | "<=" | ">=".
+	(9) expression  :=	["+" | "-"] term { ("+" | "-") term }.
+	(10) term       :=	factor { ("*" | "/" ) factor }.
+	(11) factor     :=	ident | number | "(" expression ")".
+	(12) number     :=	digit { digit }.
+	(13) ident      :=	letter { letter | digit }
+	(14) digit      :=	"0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9".
+	(15) letter     :=	"a" | "b" | ... | "y" | "z" | "A" | "B" | ... | "Y" | "Z".
 
 	
 	// NOTE:
 	// [] Means optional items
 	// {} Means repeat 0 or more times
-	// 
 	// A period . indacates the end of a defintion of a syntactic class
-
-**NOTE**:
-[ ] Means optional items
-{ } Means repeat 0 or more times
-A period . indacates the end of a defintion of a syntactic class			
 
 # The PL/0 Virtual Machine
 ***Implemented in C***, the stack machine has **two** memory stores:  
 1. The **stack**, which contains **data** to be used by the PM/0 CPU.  
 2. The **Code** (or "text"), which contains **instructions** for the VM.    
 
-It has **five** registers to handle the stack and the code/text segments.    
-
+It has **five** registers to handle the stack and the code/text segments.  
 1.  **BP** - Base Pointer  
 2.  **SP** - Stack Pointer  
 3.  **PC** - Program Counter  
-4.  **IR** - Instruction Register (*implemented as pointer to the instruction in memeory*)5.  **_baseReg** - Keeps track of the base of the register
+4.  **IR** - Instruction Register (*implemented as pointer to the instruction in memeory*)
+5.  **RP** - Register Pointer (Keeps track of the base of the register)
     
-This machine also has a Register File (**RF**) with eight (8) registers.  
+This machine also has a Register File (**RF**) with eight (20) registers _(**changeable** in pvm.h)_.  
   
 ## Running the VM  
 To run the **PL/0 VM** you must first compile the **PVM**'s source code to produce an executable.  
 `gcc -g pvm.c -o pvm.exe`  
+
 Once the code is compiled you are able to run the VM provided a machine code **[INPUT_FILE]** as follows:  
 `./pvm.exe [INPUT_FILE]`  
+
 Furthermore, the **Virtual Machine** supports the following **Directives**:  
 **-a**  `./pvm.exe [INPUT_FILE] -a`  **prints** the **Decoded Instructions Set**  
-**-v**  `./pvm.exe [INPUT_FILE] -v`  **prints** the **VM State** on *each cycle*  
+**-v**  `./pvm.exe [INPUT_FILE] -v`  **prints** the **VM State** on *each cycle*
+
 ### Saving the output  
-Both of these Directives write to `stdout`, so it's possible to direct the output to using the output redirection operator ( **>** ). For example:  
-`./pvm.exe [INPUT_FILE] -v -a >vmlog.txt`  **writes** both the **Decoded Instructions Set** and the **VM State** to *vmlog.txt*.  
+Both of these Directives write to `stdout`, so it's possible to direct the output to using the output redirection operator ( **>** ).
+
+To **write** both the **Decoded Instructions Set** and the **VM State** to *vmlog.txt*, for example.  
+`./pvm.exe [INPUT_FILE] -v -a >vmlog.txt`
+
 Note that you can change *vmlog.txt* to **any filepath** you wish.  
   
 #### Checking for memory leaks  
-Compile the source code with the following:`gcc -g pvm.c -o pvm.exe`
-Afterwards, run the program with the following line:`valgrind --leak-check=full ./pvm.exe [INPUT_FILE]`
+Compile the source code with the following:  
+`gcc -g pvm.c -o pvm.exe`
+
+Afterwards, run the program with the following line:  
+`valgrind --leak-check=full ./pvm.exe [INPUT_FILE]`
     
 ## Instruction Set Architecture  
 Each instruction contains **four components**:  
@@ -167,30 +170,30 @@ Each instruction contains **four components**:
 (24) `geq` - **GEQ** - Reg[**R**] = Reg[**L**] <= Reg[**M**]  
   
 
-#### Register Instructions
-(25) `reg_l`  **REG_L** - **0, 0, M** - Sets base register **M** levels deeper then current base register  
-(26) `reg_r`  **REG_R** - **0, 0, 0** - Resets base register to previous base register
-(27) `reg_b`  **REG_B** - **R, 0, 0** - Reg[**R**] = **_baseReg** ---_(E.g. loads current base into Reg[**R**])_
+#### Register Instructions  
+(12) `reg_l` - **REG_L** - **0, 0, M** - **RP** += **M** ------------_(Register Pointer **M** levels "deeper")_  
+(13) `reg_r` - **REG_R** - **0, 0, 0** - **RP** = Reg[**RP** - 1] ----_(Register Pointer 1 level "higher")_  
+(14) `reg_b` - **REG_B** - **R, 0, 0** - Reg[**R**] = **RP** ---------_(LODs Register Pointer into Reg[**R**])_  
   
-# The PL/0 Compiler
-The PL/0 Compiler consists of a **Scanner** and a **Parser** that both run as part of the compilation process.The compiler reads PL/0 **source code** and converts it to **machine code** (an instruction set).
-  
+# The PL/0 Compiler  
+The PL/0 Compiler consists of a **Scanner** and a **Parser** that both run as part of the compilation process.The compiler reads PL/0 **source code** and converts it to **machine code** (an instruction set).  
 To run the **PL/0 Compiler** you must first compile the **Compiler**'s source code to produce an executable.  
-`gcc -lm -g compiler.c -o compiler.exe`  
 _**NOTE** that we must link C's **math library** by using the **-lm directive**_.  
+`gcc -lm -g compiler.c -o compiler.exe`  
+ 
 
-Once the code is compiled you are able to run the Compiler provided a PL/0 source code **[INPUT_FILE]** as follows: `./compiler.exe [INPUT_FILE]`  
+Once the code is compiled you are able to run the Compiler provided a PL/0 source code **[INPUT_FILE]** as follows:  
+`./compiler.exe [INPUT_FILE]`  
 
-The compiler will output and explain any error that occurs during the compilation process.
-An example of that is:
-
-```bash  
+The compiler will output and explain any error that occurs during the compilation process.  
+```java  
 $ ./compile.exe codes/while05.txt -o compiled_factorial.plmc
 PL/0 COMPILER:
 INTERRUPTED - Assignment operator ":=" expected (ERR 13).
 LINE 15, 14: factorial = i * factorial;
                        ^
 ```
+
 By default the compiler saves the compiled **machine code** to `a.plmc`  *(PLMC stands for PL/0 Machine Code)*.
   
 You can configure the compiler using the following directives:  
@@ -200,12 +203,11 @@ You can configure the compiler using the following directives:
 
 For example the Following `./compiler.exe -a factorial.plc -o factorial.plmc` will compile the source code file, **factorial.plc**, and save the produced machine code to **factorial.plmc**  *as well as* write (**print**) that **machine code** to **STDIN**.    
 
-# Compiling and Running PL/0 Code
-**NOTE:** You must first compile both the PL/0 Virtual Machine and the PL/0 Compiler (instructed previously).
-Given a **PL/0 source code** file `factorial.plc`, we can compile and run it on the VM by following these steps:
-
-1. Compile the source code: `./compiler.exe factorial.plc -o factorial.plmc`
-2. Run the produced machine code on the VM: `./pvm.exe factorial.plmc`
+# Compiling and Running PL/0 Code  
+Given a **PL/0 source code** file `factorial.plc`, we can compile and run it on the VM by following these steps:  
+**NOTE:** You must first compile both the PL/0 Virtual Machine and the PL/0 Compiler (instructed previously).  
+  1. Compile the source code: `./compiler.exe factorial.plc -o factorial.plmc`  
+  2. Run the produced machine code on the VM: `./pvm.exe factorial.plmc`  
 
 The `factorial.plc` file:
 ```javascript
