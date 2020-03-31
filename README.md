@@ -93,10 +93,11 @@ PL/0 VM: 731		# = 731
 	// A period . indacates the end of a defintion of a syntactic class
 
 **NOTE**:
+```
 [ ] Means optional items
 { } Means repeat 0 or more times
 A period . indacates the end of a defintion of a syntactic class			
-
+```
 # The PL/0 Virtual Machine
 ***Implemented in C***, the stack machine has **two** memory stores:  
 1. The **stack**, which contains **data** to be used by the PM/0 CPU.  
