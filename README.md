@@ -115,10 +115,14 @@ Once the code is compiled you are able to run the VM provided a machine code **[
 
 Furthermore, the **Virtual Machine** supports the following **Directives**:  
 **-a**  `./pvm.exe [INPUT_FILE] -a`  **prints** the **Decoded Instructions Set**  
-**-v**  `./pvm.exe [INPUT_FILE] -v`  **prints** the **VM State** on *each cycle*  
+**-v**  `./pvm.exe [INPUT_FILE] -v`  **prints** the **VM State** on *each cycle*
+
 ### Saving the output  
-Both of these Directives write to `stdout`, so it's possible to direct the output to using the output redirection operator ( **>** ). For example:  
-`./pvm.exe [INPUT_FILE] -v -a >vmlog.txt`  **writes** both the **Decoded Instructions Set** and the **VM State** to *vmlog.txt*.  
+Both of these Directives write to `stdout`, so it's possible to direct the output to using the output redirection operator ( **>** ).
+
+To **write** both the **Decoded Instructions Set** and the **VM State** to *vmlog.txt*, for example.  
+`./pvm.exe [INPUT_FILE] -v -a >vmlog.txt`
+
 Note that you can change *vmlog.txt* to **any filepath** you wish.  
   
 #### Checking for memory leaks  
