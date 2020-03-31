@@ -37,7 +37,7 @@ end.
 ```
 
 Given an input of **3**, the output of this program (`.\pvm.exe a.plmc`) is:
-```console
+```sh
 $ ./pvm.exe a.plmc
 PL/0 VM: 
 Input integer = 3
