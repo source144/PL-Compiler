@@ -7,5 +7,6 @@ procedure fact(n);
 	end;
 begin
 	read n;
-	write fact(n);
+	write fact(n);		/* writes n!              */
+	write n;			/* n itself was unchanged */
 end.
