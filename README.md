@@ -74,7 +74,7 @@ PL/0 VM: 731		# = 731
 				] .
 	
 	// Conditions and expressions
-	(7) condition:=	"odd" expression
+	(7) condition   :=	"odd" expression
 				| expression rel-op expression.
 	(8) rel-op      :=	"=" | "<>" | "<" | ">" | "<=" | ">=".
 	(9) expression  :=	["+" | "-"] term { ("+" | "-") term }.
