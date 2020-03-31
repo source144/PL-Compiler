@@ -46,10 +46,9 @@ const char *OPSTRINGS[] = {
 	"REG_B"
 };
 
-
 #define FORMAT_HDR1(...)		printf("Line   OP     R  L  M\n")
-#define FORMAT_HDR2(...)		printf("                      PC   BP    SP    REGISTERS\n")
-#define FORMAT_INIT(...)		printf("Initial values        %-3d   %-2d    %-2d   ", __VA_ARGS__)
+#define FORMAT_HDR2(...)		printf("                         PC   BP    SP    REGISTERS[%d]\n", NUM_REGISTERS)
+#define FORMAT_INIT(...)		printf("Initial values           %-3d   %-2d    %-2d   ", __VA_ARGS__)
 #define FORMAT_DATA(...)		printf("   %-3d   %-2d    %-2d   ", __VA_ARGS__)
 #define FORMAT_INST(...)		printf("%-3d  %-6s  %d  %d  %-3d", __VA_ARGS__)
 #define FORMAT_INST_LNG(...)	printf("%-4d   %-5s  %d  %d  %-3d", __VA_ARGS__)
@@ -235,9 +234,10 @@ void printStack(vm_t *vm)
 		printf("|");
 	printf(" %d\n", vm->stack[end]);
 
-	printf("_base = %d\n", vm->__baseReg);
+	// Print base as part of the state
+	if (DBG_BASE_REG) printf("_base = %d\n", vm->__baseReg);
 
-	printf("\n");
+	printf("\n\n");
 }
 
 // Prints the current instruction that
@@ -641,9 +641,7 @@ int executeOp(vm_t *vm, int vmFlag)
 			vm->rf[r] = vm->__baseReg;
 			break;
 
-		default:
-			printf("opcode = %d\n", op);
-		return HALT_OP;
+		default: return HALT_OP;
 	}
 
 	// Print vm data after execution

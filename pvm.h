@@ -3,6 +3,9 @@
 
 #include <stdlib.h>
 
+// Debugging
+#define DBG_BASE_REG		0
+
 // Constants
 #define LINE_BUFFER			1024
 #define MAX_STACK_HEIGHT	100
