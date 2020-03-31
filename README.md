@@ -101,9 +101,10 @@ It has **five** registers to handle the stack and the code/text segments.
 1.  **BP** - Base Pointer  
 2.  **SP** - Stack Pointer  
 3.  **PC** - Program Counter  
-4.  **IR** - Instruction Register (*implemented as pointer to the instruction in memeory*)5.  **_baseReg** - Keeps track of the base of the register
+4.  **IR** - Instruction Register (*implemented as pointer to the instruction in memeory*)
+5.  **_baseReg** - Keeps track of the base of the register
     
-This machine also has a Register File (**RF**) with eight (8) registers.  
+This machine also has a Register File (**RF**) with eight (20) registers _(**changeable** in pvm.h)_.  
   
 ## Running the VM  
 To run the **PL/0 VM** you must first compile the **PVM**'s source code to produce an executable.  
