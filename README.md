@@ -126,17 +126,17 @@ To **write** both the **Decoded Instructions Set** and the **VM State** to *vmlo
 Note that you can change *vmlog.txt* to **any filepath** you wish.  
   
 #### Checking for memory leaks  
-Compile the source code with the following:
+Compile the source code with the following:  
 `gcc -g pvm.c -o pvm.exe`
 
-Afterwards, run the program with the following line:
+Afterwards, run the program with the following line:  
 `valgrind --leak-check=full ./pvm.exe [INPUT_FILE]`
 
-Compile the source code with the following:
+**Compile** the source code with the following:
 
 `gcc -g pvm.c -o pvm.exe`
 
-Afterwards, run the program with the following line:
+Afterwards, **run** the program with the following line:
 
 `valgrind --leak-check=full ./pvm.exe [INPUT_FILE]`
     
