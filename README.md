@@ -5,7 +5,7 @@
 
   
 
-### Gonen Matias - COP 3402 Spring 2020
+### Gonen Matias - Spring 2020
 
 A Virtual machine and Compiler for PL/0 language programming language.
 The language allows you to evaluate expressions, call procedures, provide arguments for procedures, capture return value of procedures, read input, and output evaluated expressions.
