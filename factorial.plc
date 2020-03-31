@@ -1,20 +1,11 @@
-var i, n, factorial, err;
+var n;
+procedure fact(n);
+	begin
+		if n < 0 then return -1;	/* -1 represents an error */
+		if n < 2 then return 1;		/* 0! = 1! = 1 */
+		return n * fact(n - 1);		/* n * (n - 1)! */
+	end;
 begin
 	read n;
-
-	factorial := 1;
-	i := 2;
-	err := -1;
-
-	if n < 0 then write err;
-
-	if n >= 0 then
-	begin
-		while i <= n do 
-		begin
-			factorial := i * factorial;
-			i := i + 1;
-		end;
-		write factorial;
-	end;
+	write fact(n);
 end.
