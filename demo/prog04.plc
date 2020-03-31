@@ -1,0 +1,19 @@
+var n;
+procedure fact(n);
+	begin
+		if n < 0 then return -1;
+		if n < 2 then return 1;
+
+		return fact(n - 1) * n;
+	end;
+
+procedure abs(k);
+	begin
+		if k < 0 then return -k;
+		return k;
+	end;
+
+begin
+	read n;
+	write fact(abs(n)) + 5 + fact(fact(n * (2 / 2)));
+end.
