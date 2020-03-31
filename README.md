@@ -109,8 +109,10 @@ This machine also has a Register File (**RF**) with eight (20) registers _(**cha
 ## Running the VM  
 To run the **PL/0 VM** you must first compile the **PVM**'s source code to produce an executable.  
 `gcc -g pvm.c -o pvm.exe`  
+
 Once the code is compiled you are able to run the VM provided a machine code **[INPUT_FILE]** as follows:  
 `./pvm.exe [INPUT_FILE]`  
+
 Furthermore, the **Virtual Machine** supports the following **Directives**:  
 **-a**  `./pvm.exe [INPUT_FILE] -a`  **prints** the **Decoded Instructions Set**  
 **-v**  `./pvm.exe [INPUT_FILE] -v`  **prints** the **VM State** on *each cycle*  
