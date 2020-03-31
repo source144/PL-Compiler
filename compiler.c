@@ -32,9 +32,8 @@
 // Globally Defined
 string_t *__content;
 node_t *__lastToken;
-int __procArgs = 0;
+int __callerIdx = -1;
 int expectSemicolon = 0;
-int expectEnd = 0;
 
 #pragma region "Function Prototypes"
 
@@ -302,6 +301,9 @@ string_t *readSymbol(string_t *content, int *idx, int *ln, int *col, int *lnIdx)
 				// therefore return NULL
 				return NULL;
 			}
+
+			// Otherwise it's not a comment but a regular slash 
+			else --(*idx);
 			break;
 		
 		case ':':
@@ -336,7 +338,6 @@ string_t *readSymbol(string_t *content, int *idx, int *ln, int *col, int *lnIdx)
 			}
 			else buffer[i++] = content->charAt[*idx];
 
-			// printf("buffer(%d): \"%s\"\n", i, buffer);
 			break;
 	}
 
@@ -592,7 +593,8 @@ void error(node_t *token, char *msg, int e)
 		else if (e == 25)	fprintf(stderr, "This number is too large (ERR %d).\n", e);
 		else if (e == 26)	fprintf(stderr, "procedure argument must be an identifier (ERR %d).\n", e);
 		else if (e == 27)	fprintf(stderr, "Left parenthesis missing (ERR %d).\n", e);
-		else if (e == 27)	fprintf(stderr, "Expected an expression (ERR %d).\n", e);
+		else if (e == 28)	fprintf(stderr, "Expected an expression (ERR %d).\n", e);
+		else if (e == 29)	fprintf(stderr, "Semicolon is not expected here (ERR %d).\n", e);
 	}
 	else if (e > 0)	fprintf(stderr, "%s (ERR %d)\n", msg, e);
 	else 			fprintf(stderr, "%s\n", msg);
@@ -622,7 +624,11 @@ node_t *nextToken(node_t *token)
 
 	// Update last token;
 	__lastToken = token;
-	
+
+	// Reset parent call point
+	if (token->next->token == semicolonsym)
+		__callerIdx = -1;
+
 	return token->next;
 }
 
@@ -771,14 +777,10 @@ node_t *block(int procIdx, int lvl, int tblIdx, int *codeIdx, node_t *token, sym
 
 	// Emit INC instruction
 	emitCode(codeIdx, OP_INC, 0, 0, reserve, code);
-	
-	// Load args from register
-	if (procIdx != MAIN)
-	{
-		for (i = 0; i < tbl[procIdx]._argc; i++)
-			emitCode(codeIdx, OP_STO, REG + i, 0, FRAME_SIZE + i, code);
-	}
-	else tbl[initTblIdx]._argc = reserve;
+
+	// Set argc for main
+	if (procIdx == MAIN)
+		tbl[initTblIdx]._argc = reserve;
 
 	// Run statements
 	token = statement(procIdx != MAIN ? procIdx : initTblIdx, lvl, &tblIdx, codeIdx, token, tbl, code);
@@ -1071,19 +1073,20 @@ node_t *statement(int procIdx, int lvl, int *tblIdx, int *codeIdx, node_t *token
 			return token;
 
 		case semicolonsym:
-			// TODO: use this somehow..
-			printf("\n\nsemicolumn\n\n");
-			break;
+			// Is semicolon expected here?
+			if (!expectSemicolon)
+				error(token, NULL, 29);
+
+			// Semicolons are processed by begin
+			return token;
 
 		case varsym:
 		case constsym:
 		case procsym:
-			if (expectEnd)	error(token, NULL, 17);
-			else			error(token, "declarations must be made on a block level", -1);
+			error(token, "declarations must be made on a block level", -1);
 
 		default:
-			if (expectEnd)	error(token, NULL, 17);
-			else			error(token, "Unexpected token", -1);
+			error(token, "Unexpected token", -1);
 	}
 
 	return nextToken(token);
@@ -1225,6 +1228,7 @@ node_t *term(int procIdx, int r, int lvl, int *tblIdx, int *codeIdx, node_t *tok
 node_t *factor(int procIdx, int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code)
 {
 	int identIdx, num, stackRV, doNeg = 0;
+	int __baseReg;
 
 	if (token->token == minussym)
 	{
@@ -1245,12 +1249,25 @@ node_t *factor(int procIdx, int r, int lvl, int *tblIdx, int *codeIdx, node_t *t
 			// procedure call
 			if (tbl[identIdx].kind == PROC)
 			{
+				// Which frame are we in right now
+				if (__callerIdx < 0)
+					__callerIdx = procIdx;
+
 				// RV location is frame size + 1. (RV, SP, BP, PC, ...args... | {RV} )
 				// stackRV ..................................................... ^
-				stackRV = procIdx != MAIN ? tbl[procIdx]._argc + FRAME_SIZE : tbl[procIdx]._argc;
+				stackRV = __callerIdx != MAIN ? tbl[__callerIdx]._argc + FRAME_SIZE : tbl[__callerIdx]._argc;
+
+				// Get current base reg into REG[r + 1]
+				emitCode(codeIdx, REG_B, r + 1, 0, 0, code);
+
+				// Adjust base register to r + 2 (literal)
+				emitCode(codeIdx, REG_L, 0, 0, r + 2, code);
 
 				// Proceed with call
 				token = __call(r, lvl, tblIdx, codeIdx, token, tbl, code);
+
+				// Reset base reg from register REG[r + 1]
+				emitCode(codeIdx, REG_R, r + 1, 0, 0, code);
 
 				// Capture RV from stack and LOD into REG[r] to continue expr
 				emitCode(codeIdx, OP_LOD, r, 0, stackRV, code);
@@ -1272,14 +1289,13 @@ node_t *factor(int procIdx, int r, int lvl, int *tblIdx, int *codeIdx, node_t *t
 			num = atoi(token->data->charAt);
 			if (numDigits(num) > MAX_DECIM_LEN)
 				error(token, NULL, 25);
-
+			
 			emitCode(codeIdx, OP_LIT, r, 0, num, code);
 			break;
 		
 		// "(" - (Left Parenthesis)
 		case lparentsym:
 
-			printf("\n\nWE HAVE A LEFT PARENTHESIS EXPR\n");
 			// Process expression after "(" (Left Parenthesis)
 			token = expression(procIdx, r, lvl, tblIdx, codeIdx, nextToken(token), tbl, code);
 
@@ -1289,7 +1305,7 @@ node_t *factor(int procIdx, int r, int lvl, int *tblIdx, int *codeIdx, node_t *t
 			break;
 
 		default:
-			error(token, "Expected an identifier/number/expression!", -1);
+			error(token, "Expression is invalid.\nExpected an identifier/number/expression!", -1);
 			break;
 	}
 	
@@ -1302,7 +1318,7 @@ node_t *factor(int procIdx, int r, int lvl, int *tblIdx, int *codeIdx, node_t *t
 node_t *__call(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code)
 {
 	node_t *_lparenthesis;
-	int identIdx, numArgs;
+	int identIdx, numArgs, i, _callerFrame;;
 
 	// Call procedure with the following identitiy identity
 	if (token->token == identsym)
@@ -1349,6 +1365,15 @@ node_t *__call(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_
 		// Expect rparenthesis
 		if (token->token != rparentsym)
 			error(token, NULL, 22);
+
+		// Current frame size
+		if (__callerIdx == MAIN)
+			_callerFrame = tbl[__callerIdx]._argc;
+		else _callerFrame = FRAME_SIZE + tbl[__callerIdx]._argc;
+
+		// Dynamically store args to stack from proper (_callers frame + base_frame_size + argIdx)
+		for (i = 0; i < numArgs; i++)
+			emitCode(codeIdx, OP_STO, r + i, 0, _callerFrame + FRAME_SIZE + i, code);
 
 		// Emit procedure call procedure
 		emitCode(codeIdx, OP_CAL, 0, lvl - tbl[identIdx].level, tbl[identIdx].addr, code);
