@@ -669,12 +669,14 @@ node_t *block(int procIdx, int lvl, int tblIdx, int *codeIdx, node_t *token, sym
 {
 	// Block indexes
 	int reserve, initTblIdx, initCodeIdx, _procIdx, i;
+	int _dr = 0, _r = FRAME_SIZE;
 
 	if (lvl > MAX_LEXI_LEVELS)
 		error(token, "Lexical level exceeded", -1);
 
 	// Prep Jump instruction
-	tbl[initTblIdx = tblIdx++].addr = *codeIdx;
+	// if (procIdx == MAIN)
+		tbl[initTblIdx = tblIdx++].addr = *codeIdx;
 
 	// Memory to reserve
 	//  RV, SP, BP, PC, {...args...}
@@ -695,6 +697,7 @@ node_t *block(int procIdx, int lvl, int tblIdx, int *codeIdx, node_t *token, sym
 			// Add first arg
 			tableInsert(VAR, token->data->charAt, &tblIdx, lvl, &reserve, -1, tbl);
 			tbl[procIdx]._argc++;
+			_r++;
 
 			// add additional args
 			while ((token = nextToken(token))->token == commasym)
@@ -705,6 +708,7 @@ node_t *block(int procIdx, int lvl, int tblIdx, int *codeIdx, node_t *token, sym
 				// Add arg
 				tableInsert(VAR, token->data->charAt, &tblIdx, lvl, &reserve, -1, tbl);
 				tbl[procIdx]._argc++;
+				_r++;
 			}
 		}
 
@@ -721,30 +725,45 @@ node_t *block(int procIdx, int lvl, int tblIdx, int *codeIdx, node_t *token, sym
 	}
 
 	// Emit Jump instruction only in main
-	else emitCode(codeIdx, OP_JMP, 0, 0 ,0, code);
+	// else
+	 emitCode(codeIdx, OP_JMP, 0, 0 ,0, code);
+
+	printf("INIT === [%s] _r = %d\t_dr=%d\n", procIdx == MAIN ? "" : tbl[procIdx].name, _r, _dr);
 
 	while (token->token == constsym || token->token == varsym || token->token == procsym)
 	{
 		// const ident = num {, ident = num};
 		if (token->token == constsym)
 		{
+			printf("=== [%s] reserve = %d\n", procIdx == MAIN ? "" : tbl[procIdx].name, reserve);
+			_dr = reserve;
+			
 			// const declaration
 			do token = nextToken(token);
 			while ((token = constdec(lvl, &tblIdx, &reserve, token, tbl))->token == commasym);
 
 			if (token->token != semicolonsym)
 				error(token, NULL, 5);
+
+			_r += reserve - _dr;
+			printf("=== [%s] _r = %d\t_dr=%d\n", procIdx == MAIN ? "" : tbl[procIdx].name, _r, _dr);
 		}
 
 		// var ident {, ident};
 		else if (token->token == varsym)
 		{
+			printf("=== [%s] reserve = %d\n", procIdx == MAIN ? "" : tbl[procIdx].name, reserve);
+			_dr = reserve;
+
 			// var declaration
 			do token = nextToken(token);
 			while ((token = vardec(lvl, &tblIdx, &reserve, token, tbl))->token == commasym);
 
 			if (token->token != semicolonsym)
 				error(token, NULL, 5);
+
+			_r += reserve - _dr;
+			printf("=== [%s] _r = %d\t_dr=%d\n", procIdx == MAIN ? "" : tbl[procIdx].name, _r, _dr);
 		}
 		
 		// procedure ident([ident{, ident}]);
@@ -757,6 +776,7 @@ node_t *block(int procIdx, int lvl, int tblIdx, int *codeIdx, node_t *token, sym
 				// Jump to skip procedure block
 				token = procdec(lvl, &tblIdx, &reserve, nextToken(token), tbl);
 
+				// TODO: nested procedures are ruined here!
 				// Set procedure's address (!!)
 				tbl[_procIdx = tblIdx - 1].addr = *codeIdx;
 
@@ -766,22 +786,31 @@ node_t *block(int procIdx, int lvl, int tblIdx, int *codeIdx, node_t *token, sym
 			}
 
 			// Run procedure again if needed
-			 while(token->token == procsym);
+			while(token->token == procsym);
 		}
 
 		token = nextToken(token);
 	}
 
+	printf("After [%s] reserve = %d, _r = %d\n", procIdx == MAIN ? "" : tbl[procIdx].name, reserve, _r);
+
 	// Modify jump addresses
 	code[tbl[initTblIdx].addr].m	= *codeIdx;
 	tbl[initTblIdx].addr			= *codeIdx;
+	printf("[%s] from block @ %d\n", tbl[initTblIdx].name, *codeIdx);
+
+	// Set for main
+	if (procIdx == MAIN)
+	{
+
+
+		tbl[initTblIdx]._argc = 0;
+		tbl[initTblIdx]._reserve = _r;
+	}
+	else tbl[procIdx]._reserve = _r;
 
 	// Emit INC instruction
-	emitCode(codeIdx, OP_INC, 0, 0, reserve, code);
-
-	// Set argc for main
-	if (procIdx == MAIN)
-		tbl[initTblIdx]._argc = reserve;
+	emitCode(codeIdx, OP_INC, 0, 0, _r, code);
 
 	// Run statements
 	token = statement(procIdx != MAIN ? procIdx : initTblIdx, lvl, &tblIdx, codeIdx, token, tbl, code);
@@ -898,6 +927,10 @@ node_t *statement(int procIdx, int lvl, int *tblIdx, int *codeIdx, node_t *token
 		case beginsym:
 			// State
 			expectSemicolon++;
+		
+			// Set this procedures start
+			// tbl[procIdx] =
+			printf("[%s] begin @ %d\n", tbl[procIdx].name, *codeIdx);
 
 			while ((token = nextToken(token))->token != endsym)
 				if ((token = statement(procIdx, lvl, tblIdx, codeIdx, token, tbl, code))->token != semicolonsym)
@@ -1256,7 +1289,9 @@ node_t *factor(int procIdx, int r, int lvl, int *tblIdx, int *codeIdx, node_t *t
 
 				// RV location is frame size + 1. (RV, SP, BP, PC, ...args... | {RV} )
 				// stackRV ..................................................... ^
-				stackRV = __callerIdx != MAIN ? tbl[__callerIdx]._argc + FRAME_SIZE : tbl[__callerIdx]._argc;
+				// stackRV = __callerIdx != MAIN ? tbl[__callerIdx]._argc + FRAME_SIZE : tbl[__callerIdx]._argc;
+				stackRV = tbl[__callerIdx]._reserve;
+				printf("[%s] -> [%s] stackRV = %d\n", tbl[__callerIdx].name, tbl[identIdx].name, stackRV);
 
 				// Get current base reg into REG[r + 1]
 				emitCode(codeIdx, REG_B, r + 1, 0, 0, code);
@@ -1319,7 +1354,8 @@ node_t *factor(int procIdx, int r, int lvl, int *tblIdx, int *codeIdx, node_t *t
 node_t *__call(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_t *tbl, instruction_t *code)
 {
 	node_t *_lparenthesis;
-	int identIdx, numArgs, i, _callerFrame;;
+	int identIdx, numArgs, i;
+	//int _callerFrame;
 
 	// Call procedure with the following identitiy identity
 	if (token->token == identsym)
@@ -1368,13 +1404,13 @@ node_t *__call(int r, int lvl, int *tblIdx, int *codeIdx, node_t *token, symbol_
 			error(token, NULL, 22);
 
 		// Current frame size
-		if (__callerIdx == MAIN)
-			_callerFrame = tbl[__callerIdx]._argc;
-		else _callerFrame = FRAME_SIZE + tbl[__callerIdx]._argc;
+		// if (__callerIdx == MAIN)
+		// 	_callerFrame = tbl[__callerIdx]._argc;
+		// else _callerFrame = FRAME_SIZE + tbl[__callerIdx]._argc;
 
 		// Dynamically store args to stack from proper (_callers frame + base_frame_size + argIdx)
 		for (i = 0; i < numArgs; i++)
-			emitCode(codeIdx, OP_STO, r + i, 0, _callerFrame + FRAME_SIZE + i, code);
+			emitCode(codeIdx, OP_STO, r + i, 0, tbl[__callerIdx]._reserve + FRAME_SIZE + i, code);
 
 		// Emit procedure call procedure
 		emitCode(codeIdx, OP_CAL, 0, lvl - tbl[identIdx].level, tbl[identIdx].addr, code);

@@ -114,6 +114,7 @@ typedef struct
 	int level; 		// L level
 	int addr; 		// M address
 	int _argc;		// Number of args expected (procedure)
+	int _reserve;		// Number of args expected (procedure)
 } symbol_t;
 
 #pragma endregion
