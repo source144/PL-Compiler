@@ -52,12 +52,12 @@ PL/0 VM: 731		# = 731
 ### The EBNF  of PL/0:
 
     // Base
-    (1) program		:=	block ".".
+    (1) program	:=	block ".".
     (2) block	:=	{ constdec | vardec | procdec } statement.
     
     // Declarations
-    (3) constdec	:=	"const" ident "=" number {"," ident "=" number } ";".
-    (4) vardec		:=	"var" ident {"," ident } ";".
+    (3) constdec:=	"const" ident "=" number {"," ident "=" number } ";".
+    (4) vardec	:=	"var" ident {"," ident } ";".
     (5) procdec		:=	procedure ident "(" [ ident {"," ident}] ");" block ";".
     
     // Statements
