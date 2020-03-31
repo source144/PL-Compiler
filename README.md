@@ -37,15 +37,15 @@ end.
 ```
 
 Given an input of **3**, the output of this program (`.\pvm.exe a.plmc`) is:
-```sh
+```java
 $ ./pvm.exe a.plmc
 PL/0 VM: 
 Input integer = 3
-			# 3! + 5 + ((3 * (2/2))!)!
-			# 6 + 5 + ((3 * 1)!)!
-			# 11 + (6)!
-			# 11 + 720
-PL/0 VM: 731		# = 731
+			// 3! + 5 + ((3 * (2/2))!)!
+			// 6 + 5 + ((3 * 1)!)!
+			// 11 + (6)!
+			// 11 + 720
+PL/0 VM: 731		// = 731
 ```
 
 ---
@@ -170,22 +170,23 @@ Each instruction contains **four components**:
 (24) `geq` - **GEQ** - Reg[**R**] = Reg[**L**] <= Reg[**M**]  
   
 
-#### Register Instructions
-(25) `reg_l`  **REG_L** - **0, 0, M** - Makes Register Pointer _(**RP**)_ **M** levels "deeper" 
-(26) `reg_r`  **REG_R** - **0, 0, 0** - Moves Register Pointer _(**RP**)_ "one level higher"  
-(27) `reg_b`  **REG_B** - **R, 0, 0** - Reg[**R**] = _**RP**_ ---_(E.g. loads current **RP** (**value**) into Reg[**R**])_  
+#### Register Instructions  
+(12) `reg_l` - **REG_L** - **0, 0, M** - **RP** += **M** ------------_(Register Pointer **M** levels "deeper")_  
+(13) `reg_r` - **REG_R** - **0, 0, 0**  - **RP** = Reg[**RP** - 1] ---_(Register Pointer 1 level "higher")_  
+(14) `reg_b` - **REG_B** - **R, 0, 0**  - Reg[**R**] = **RP** --------_(LODs Register Pointer into Reg[**R**])_  
   
 # The PL/0 Compiler  
 The PL/0 Compiler consists of a **Scanner** and a **Parser** that both run as part of the compilation process.The compiler reads PL/0 **source code** and converts it to **machine code** (an instruction set).  
 To run the **PL/0 Compiler** you must first compile the **Compiler**'s source code to produce an executable.  
-`gcc -lm -g compiler.c -o compiler.exe`  
 _**NOTE** that we must link C's **math library** by using the **-lm directive**_.  
+`gcc -lm -g compiler.c -o compiler.exe`  
+ 
 
 Once the code is compiled you are able to run the Compiler provided a PL/0 source code **[INPUT_FILE]** as follows:  
 `./compiler.exe [INPUT_FILE]`  
 
 The compiler will output and explain any error that occurs during the compilation process.  
-```bash  
+```java  
 $ ./compile.exe codes/while05.txt -o compiled_factorial.plmc
 PL/0 COMPILER:
 INTERRUPTED - Assignment operator ":=" expected (ERR 13).
@@ -204,9 +205,9 @@ For example the Following `./compiler.exe -a factorial.plc -o factorial.plmc` wi
 
 # Compiling and Running PL/0 Code  
 Given a **PL/0 source code** file `factorial.plc`, we can compile and run it on the VM by following these steps:  
-1. Compile the source code: `./compiler.exe factorial.plc -o factorial.plmc`  
-2. Run the produced machine code on the VM: `./pvm.exe factorial.plmc`  
 **NOTE:** You must first compile both the PL/0 Virtual Machine and the PL/0 Compiler (instructed previously).  
+  1. Compile the source code: `./compiler.exe factorial.plc -o factorial.plmc`  
+  2. Run the produced machine code on the VM: `./pvm.exe factorial.plmc`  
 
 The `factorial.plc` file:
 ```javascript
