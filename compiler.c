@@ -783,6 +783,9 @@ node_t *block(int procIdx, int lvl, int tblIdx, int *codeIdx, node_t *token, sym
 				// Procedure block
 				if ((token = block(_procIdx, lvl + 1, tblIdx, codeIdx, token, tbl, code))->token != semicolonsym)
 					error(alginForError(__lastToken, !CHECK_LINE), NULL, 5);
+
+				// TODO: emit return?
+				emitCode(codeIdx, OP_RTN, 0, 0, 0, code);
 			}
 
 			// Run procedure again if needed
@@ -935,6 +938,12 @@ node_t *statement(int procIdx, int lvl, int *tblIdx, int *codeIdx, node_t *token
 			while ((token = nextToken(token))->token != endsym)
 				if ((token = statement(procIdx, lvl, tblIdx, codeIdx, token, tbl, code))->token != semicolonsym)
 					error(alginForError(__lastToken, !CHECK_LINE), NULL, 10);
+
+			// TODO: return
+			if (procIdx != MAIN)
+			{
+				printf("Add return statement here \n");
+			}
 
 			expectSemicolon--;
 			break;
