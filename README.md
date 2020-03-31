@@ -102,7 +102,7 @@ It has **five** registers to handle the stack and the code/text segments.
 2.  **SP** - Stack Pointer  
 3.  **PC** - Program Counter  
 4.  **IR** - Instruction Register (*implemented as pointer to the instruction in memeory*)
-5.  **_baseReg** - Keeps track of the base of the register
+5.  **RP** - Register Pointer (Keeps track of the base of the register)
     
 This machine also has a Register File (**RF**) with eight (20) registers _(**changeable** in pvm.h)_.  
   
@@ -163,9 +163,9 @@ Each instruction contains **four components**:
   
 
 #### Register Instructions
-(25) `reg_l`  **REG_L** - **0, 0, M** - Sets base register **M** levels deeper then current base register  
-(26) `reg_r`  **REG_R** - **0, 0, 0** - Resets base register to previous base register
-(27) `reg_b`  **REG_B** - **R, 0, 0** - Reg[**R**] = **_baseReg** ---_(E.g. loads current base into Reg[**R**])_
+(25) `reg_l`  **REG_L** - **0, 0, M** - Makes Register Pointer _(**RP**)_ **M** levels "deeper"   
+(26) `reg_r`  **REG_R** - **0, 0, 0** - Moves Register Pointer _(**RP**)_ "one level higher"
+(27) `reg_b`  **REG_B** - **R, 0, 0** - Reg[**R**] = _**RP**_ ---_(E.g. loads current **RP** (**value**) into Reg[**R**])_
   
 # The PL/0 Compiler
 The PL/0 Compiler consists of a **Scanner** and a **Parser** that both run as part of the compilation process.The compiler reads PL/0 **source code** and converts it to **machine code** (an instruction set).
