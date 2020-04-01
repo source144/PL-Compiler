@@ -24,10 +24,10 @@ procedure fact(n);
 		return fact(n - 1) * n;
 	end;
 
-procedure abs(k);
+procedure abs(n);
 	begin
-		if k < 0 then return -k;
-		return k;
+		if n < 0 then return -n;
+		return n;
 	end;
 
 begin
