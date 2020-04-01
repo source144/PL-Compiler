@@ -261,8 +261,9 @@ void printState(vm_t *vm)
 			printf("%c", i == __bp ? '`' : ' ');
 		printf("%s\n", __sp == __bp ? "`^" : "^");
 	}
+	else printf("\n\n");
 
-	printf("\n\n");
+	// printf("\n\n");
 }
 
 // Prints the register file of a vm
@@ -336,6 +337,13 @@ void printStack(vm_t *vm)
 	if (i < vm->bp) __bp += _dlen;
 	if (j > 1)		__bp++;
 	__sp += _dlen + 1;
+
+	// Adjust
+	for (; i < vm->bp || i < vm->sp; i++)
+	{
+		if (i < vm->bp)	__bp += 2;
+		if (i < vm->sp)	__sp += 2;
+	}
 }
 
 // Prints the current instruction that
@@ -564,7 +572,7 @@ int executeOp(vm_t *vm, int vmFlag)
 			// Output to stdout because 
 			// stdout might be directed to a file
 			if (vmFlag)
-				OUT("%d\n", vm->rf[r]);
+				OUT("%d%s", vm->rf[r], _indicator ? "" : "\n");
 
 
 			return CONTINUE;
@@ -581,6 +589,7 @@ int executeOp(vm_t *vm, int vmFlag)
 			// Capture
 			fscanf(stdin, "%d", vm->rf + r);
 			fflush(stdin);
+
 			fprintf(stderr, "\n");
 
 			// Output to stdout because 
@@ -591,7 +600,7 @@ int executeOp(vm_t *vm, int vmFlag)
 				vm->pc--;
 
 				// Print out captured value and prompt to stdin
-				OUT("Input integer = %d\n", vm->rf[r]);
+				OUT("Input integer = %d%s", vm->rf[r], _indicator ? "" : "\n");
 				printInstruction(vm);
 
 				// Restore PC
