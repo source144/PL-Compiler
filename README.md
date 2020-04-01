@@ -1,7 +1,7 @@
 
   
 
-# PM/0 Virtual Machine and Compiler
+# PL/0 Virtual Machine and Compiler
 
   
 
