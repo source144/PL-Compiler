@@ -10,6 +10,7 @@
 // their methods are defined in pvm.h
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "pvm.h"
 
 // IO Defines
@@ -52,6 +53,17 @@ const char *OPSTRINGS[] = {
 #define FORMAT_DATA(...)		printf("   %-3d   %-2d    %-2d   ", __VA_ARGS__)
 #define FORMAT_INST(...)		printf("%-3d  %-6s  %d  %d  %-3d", __VA_ARGS__)
 #define FORMAT_INST_LNG(...)	printf("%-4d   %-5s  %d  %d  %-3d", __VA_ARGS__)
+
+#define _FORMAT__PTRS	"   %-3d   %-2d    %-2d   "
+#define _FORMAT__INST	"%-4d   %-5s  %d  %d  %-3d"
+#define _FORMAT__INST1	"%-3d  %-6s  %d  %d  %-3d"
+
+char *__ptrs;
+char *__instrct;
+int __sz;
+int __sp;
+int __bp;
+int _indicator = 0;
 
 #pragma region "Function Prototypes"
 vm_t *initVMWithCode(instruction_t **code);
@@ -191,9 +203,51 @@ void initialPrint(vm_t *vm)
 // Assumes vm in its entirety is valid 
 void printState(vm_t *vm)
 {
-	FORMAT_DATA(vm->pc, vm->bp, vm->sp);
+	int i, buf;
+
+	// Append PC, BP and SP to line string
+	sprintf(__ptrs, "   %-3d   %-2d    %-2d   ",  vm->pc, vm->bp, vm->sp);
+
+	if (_indicator)
+	{
+		// Indicator buffer spaces
+		for (i = 0; __ptrs[i]; i++)
+			printf(" ");
+
+		for (i = 0; __instrct[i]; i++)
+			printf(" ");
+
+		// Get total distance until indicator
+		for (buf = i = 0; i < vm->__baseReg; i++)
+			buf += numDigits(vm->rf[i]) + 2;
+			
+		for (i = 0; i < buf; i++)
+			printf(" ");
+		printf(",\n");
+	}
+	
+	// Print the decoded instructions
+	// and SP, BP... etc.
+	printf("%s", __instrct);
+	printf("%s", __ptrs);
+
+	// Continue printing state
 	printRegisters(vm->rf);
 	printStack(vm);
+
+	// Actually print the stack
+	printf("%s\n", __ptrs);
+
+	// TODO:
+	// Print SP & BP indicators
+	if (_indicator)
+	{
+		for (i = 0; i < __sp; i++)
+			printf("%c", i == __bp ? '^' : ' ');
+		printf("%s\n", __sp == __bp ? "^;" : ";");
+	}
+
+	printf("\n");
 }
 
 // Prints the register file of a vm
@@ -202,6 +256,7 @@ void printRegisters(int rf[NUM_REGISTERS])
 {
 	int i, end = NUM_REGISTERS - 1;
 
+	// Print registers	
 	for (i = 0; i < end; i++)
 		printf("%d  ", rf[i]);
 	printf("%d\n", rf[end]);
@@ -211,33 +266,102 @@ void printRegisters(int rf[NUM_REGISTERS])
 // Assumes vm in its entirety is valid 
 void printStack(vm_t *vm)
 {
-	int i, j, end = vm->sp - 1;
-	printf("Stack: ");
+	int i, j, end = vm->sp - 1, _digits, _i;
+	sprintf(__ptrs, "Stack: ");
+
+	// printf("Stack: ");
 
 	if (!vm->sp)
 	{
-		printf("\n\n");
+		// printf("\n       ;\n");
 		return;
 	}
 
 	j = 0;
-	printf("%d ", vm->stack[0]);
+	_i = 7;
+	sprintf(__ptrs + _i, "%d ", vm->stack[0]);
+
+	// printf("\n%s\n",__ptrs);
+	// printf("%d ", vm->stack[0]);
+	// printf("\nNum digits: %d\n", _i);
+
+	// Init SP & BP Indicator buffer
+	_digits = numDigits(vm->stack[0]);
+	__bp = __sp = 9 + _digits;
+	_i += _digits + 1;
+	
+	// printf("\nstrlen = %d\n", strlen(__ptrs));
+	// printf("_i = %d\n", _i);
+
 	for (i = 1; i < end; i++)
 	{
+		// TODO:
+		if (_i + 3 >= __sz)
+			resizeIndicator();
+
+		// Get number of digits
+		_digits = numDigits(vm->stack[i]);
+		
 		if (vm->__AR[j] && vm->__AR[j] == i && ++j)
-			printf("|");
-		printf(" %d ", vm->stack[i]);
+		{
+			// printf("|");
+
+			// TODO:
+			sprintf(__ptrs + _i, "|");
+			
+			// printf("\nstrlen = %d\n", strlen(__ptrs));
+			// printf("i = %d\n", _i);
+
+			// Increment SP & BP buffers
+			if (i < vm->sp)
+				__sp++;
+			if (i <= vm->bp)
+				__bp++;
+			_i++;
+		}
+		// printf(" %d ", vm->stack[i]);
+
+		// TODO
+		sprintf(__ptrs + _i, " %d ", vm->stack[i]);
+
+
+
+		// Update SP & BP buffers
+		if (i < vm->sp)
+			__sp += _digits + 2;
+		if (i < vm->bp)
+			__bp += _digits + 2;
+		_i += _digits + 2;
+
+		// printf("\nstrlen = %d\n", strlen(__ptrs));
+		// printf("_i = %d\n", _i);
 	}
 
+	
+	// Get number of digits
+	_digits = numDigits(vm->stack[end]);
+
 	// Last element
-	if (vm->__AR[j++] == end)
-		printf("|");
-	printf(" %d\n", vm->stack[end]);
+	if (vm->__AR[j++] == end && ++__sp)
+	{
+		sprintf(__ptrs + _i, "|");
 
-	// Print base as part of the state
-	if (DBG_BASE_REG) printf("_base = %d\n", vm->__baseReg);
+		// Increment SP & BP buffers
+		if (i < vm->sp)
+			__sp++;
+		if (i <= vm->bp)
+			__bp++;
+		_i++;
+	}
 
-	printf("\n\n");
+	sprintf(__ptrs + _i, " %d\n", vm->stack[end]);
+	__ptrs[_i += _digits + 1] = '\0';
+
+	// Update SP & BP buffers
+	if (i < vm->sp)
+		__sp += _digits + 1;
+	if (i < vm->bp)
+		__bp += _digits + 1;
 }
 
 // Prints the current instruction that
@@ -245,9 +369,9 @@ void printStack(vm_t *vm)
 // Assumes vm in its entirety is valid 
 void printInstruction(vm_t *vm)
 {
-	FORMAT_INST(vm->pc, getOPStr(vm->code[vm->ir]->op),
+	// Format into str
+	sprintf(__instrct, _FORMAT__INST1, vm->pc, getOPStr(vm->code[vm->ir]->op),
 			vm->code[vm->ir]->r, vm->code[vm->ir]->l, vm->code[vm->ir]->m);
-	fflush(stdout);
 }
 
 void printHaltReason(int haltCode)
@@ -359,7 +483,7 @@ void loadFile(char *filename, instruction_t *code[])
 
 int executeOp(vm_t *vm, int vmFlag)
 {
-	int base, op, r, l, m;
+	int base, op, r, l, m, shouldPrint = 1;
 
 	// Readability purposes:
 	op = vm->code[vm->ir]->op;
@@ -617,6 +741,9 @@ int executeOp(vm_t *vm, int vmFlag)
 			if (willOverflowRegister(m))
 				return HALT_REG;
 
+			shouldPrint = 0;
+			if (vmFlag) printState(vm);
+
 			// __baseRegister = m + __baseRegister
 			vm->__baseReg = m + vm->__baseReg;
 			break;
@@ -628,6 +755,9 @@ int executeOp(vm_t *vm, int vmFlag)
 			if (willOverflowRegister(r))
 				return HALT_REG;
 			
+			shouldPrint = 0;
+			if (vmFlag) printState(vm);
+
 			// __baseRegister = REG[__baseRegister - 1] (or 0 if no previous)
 			vm->__baseReg = vm->__baseReg ? vm->rf[vm->__baseReg - 1] : 0;
 			break;
@@ -637,6 +767,9 @@ int executeOp(vm_t *vm, int vmFlag)
 			if (willOverflowRegister(r))
 				return HALT_REG;
 			
+			shouldPrint = 0;
+			if (vmFlag) printState(vm);
+
 			// REG[r] = __baseRegister
 			vm->rf[r] = vm->__baseReg;
 			break;
@@ -645,7 +778,7 @@ int executeOp(vm_t *vm, int vmFlag)
 	}
 
 	// Print vm data after execution
-	if (vmFlag) printState(vm);
+	if (shouldPrint && vmFlag) printState(vm);
 
 	return CONTINUE;
 }
@@ -664,6 +797,19 @@ void fetchOp(vm_t *vm, int printFlag)
 
 	// Increment PC after print
 	vm->pc++;
+}
+
+void initIndicator(void)
+{
+	__sz = LINE_BUFFER;
+	__instrct = calloc(__sz, sizeof(char));
+	__ptrs = calloc(__sz, sizeof(char));
+}
+
+void resizeIndicator(void)
+{
+	realloc(__ptrs, (__sz *= 2) * sizeof(char));
+	realloc(__instrct, __sz * sizeof(char));
 }
 
 int main(int argc, char *argv[])
@@ -695,6 +841,11 @@ int main(int argc, char *argv[])
 				// -a  -  Print machinecode (stdout)
 				case FLAG_ASMBLY:
 					a = 1;
+					break;
+
+				// -i  -  Print indicators (SP, BP, RP) (stdout)
+				case FLAG_IDCTR:
+					_indicator = 1;
 					break;
 
 				default:
@@ -744,8 +895,14 @@ int main(int argc, char *argv[])
 	// Print initial VM State
 	if (v)
 	{
+		initIndicator();
+		printf("\n");
 		printf("\nVM State Log:\n");
 		printf("-------------\n");
+		printf("\nBase Pointer (SP):       ^");
+		printf("\nStack Pointer (SP):      ;");
+		printf("\nRegister Pointer (RP):   ,");
+		printf("\n");
 		initialPrint(vm);
 	}
 
@@ -764,6 +921,8 @@ int main(int argc, char *argv[])
 
 	// Cleanup
 	destroyVM(vm);
+	free(__instrct);
+	free(__ptrs);
 
 	// Exit properly
 	return 0;

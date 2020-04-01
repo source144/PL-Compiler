@@ -7,9 +7,10 @@
 #define __PVM__
 
 #include <stdlib.h>
+#include <math.h>
 
 // Debugging
-#define DBG_BASE_REG		0
+#define DBG_BASE_REG		1
 
 // Constants
 #define LINE_BUFFER			1024
@@ -21,6 +22,7 @@
 // Directives
 #define FLAG		'-'
 #define FLAG_LEX	'l'
+#define FLAG_IDCTR	'i'
 #define FLAG_ASMBLY	'a'
 #define FLAG_VM		'v'
 #define FLAG_OUT	'o'
@@ -92,6 +94,16 @@ typedef struct
 	int __AR[MAX_LEXI_LEVELS];				// Indexes of records in stack
 	instruction_t **code;	// All instructions of the VM
 } vm_t;
+
+void initIndicator(void);
+void resizeIndicator(void);
+
+
+int numDigits(int n)
+{
+	return n ? floor(log10(abs(n))) + 1 + (n < 0) : 1;
+}
+
 #pragma endregion
 
 #endif
