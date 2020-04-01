@@ -197,6 +197,21 @@ void initialPrint(vm_t *vm)
 	FORMAT_INIT(vm->pc, vm->bp, vm->sp);
 	printRegisters(vm->rf);
 	printStack(vm);
+
+	// Actually print the stack
+	printf("%s\n", __ptrs);
+
+	// TODO:
+	// Print SP & BP indicators
+	if (_indicator)
+	{
+		for (int i = 0; i < __sp; i++)
+			printf("%c", i == __bp ? '`' : ' ');
+		printf("%s\n", __sp == __bp ? "`^" : "^");
+	}
+
+	printf("\n\n");
+
 }
 
 // Print current state of a vm
@@ -243,11 +258,11 @@ void printState(vm_t *vm)
 	if (_indicator)
 	{
 		for (i = 0; i < __sp; i++)
-			printf("%c", i == __bp ? '^' : ' ');
-		printf("%s\n", __sp == __bp ? "^;" : ";");
+			printf("%c", i == __bp ? '`' : ' ');
+		printf("%s\n", __sp == __bp ? "`^" : "^");
 	}
 
-	printf("\n");
+	printf("\n\n");
 }
 
 // Prints the register file of a vm
@@ -266,102 +281,61 @@ void printRegisters(int rf[NUM_REGISTERS])
 // Assumes vm in its entirety is valid 
 void printStack(vm_t *vm)
 {
-	int i, j, end = vm->sp - 1, _digits, _i;
+	int i, j, end = vm->sp - 1, _digits, _len, _dlen;
 	sprintf(__ptrs, "Stack: ");
+	_len = __sp = __bp = 7;
 
-	// printf("Stack: ");
-
-	if (!vm->sp)
-	{
-		// printf("\n       ;\n");
+	if (j = !vm->sp)
 		return;
-	}
-
-	j = 0;
-	_i = 7;
-	sprintf(__ptrs + _i, "%d ", vm->stack[0]);
-
-	// printf("\n%s\n",__ptrs);
-	// printf("%d ", vm->stack[0]);
-	// printf("\nNum digits: %d\n", _i);
+	
+	// Print stack[0]
+	sprintf(__ptrs + _len, "%d ", vm->stack[0]);
 
 	// Init SP & BP Indicator buffer
 	_digits = numDigits(vm->stack[0]);
-	__bp = __sp = 9 + _digits;
-	_i += _digits + 1;
-	
-	// printf("\nstrlen = %d\n", strlen(__ptrs));
-	// printf("_i = %d\n", _i);
+	__bp = __sp += 2 + _digits;
+	_dlen = _len += _digits + 1;
 
+	// Print stack[i], i ∈ [1, sp - 1)	
 	for (i = 1; i < end; i++)
 	{
-		// TODO:
-		if (_i + 3 >= __sz)
+		// init _dlen for difference and
+		// Reallocate buffer memory if needed
+		if ((_dlen = _len) + 3 >= __sz)
 			resizeIndicator();
 
 		// Get number of digits
 		_digits = numDigits(vm->stack[i]);
 		
+		// Print AR seperator (& increment _len)
 		if (vm->__AR[j] && vm->__AR[j] == i && ++j)
-		{
-			// printf("|");
+			sprintf(__ptrs + _len++, "|");
 
-			// TODO:
-			sprintf(__ptrs + _i, "|");
-			
-			// printf("\nstrlen = %d\n", strlen(__ptrs));
-			// printf("i = %d\n", _i);
+		// Print stack[i]
+		sprintf(__ptrs + _len, " %d ", vm->stack[i]);
 
-			// Increment SP & BP buffers
-			if (i < vm->sp)
-				__sp++;
-			if (i <= vm->bp)
-				__bp++;
-			_i++;
-		}
-		// printf(" %d ", vm->stack[i]);
-
-		// TODO
-		sprintf(__ptrs + _i, " %d ", vm->stack[i]);
-
-
-
+		// Get difference
 		// Update SP & BP buffers
-		if (i < vm->sp)
-			__sp += _digits + 2;
-		if (i < vm->bp)
-			__bp += _digits + 2;
-		_i += _digits + 2;
-
-		// printf("\nstrlen = %d\n", strlen(__ptrs));
-		// printf("_i = %d\n", _i);
+		__sp += (_dlen = (_len += _digits + 2) - _dlen);
+		if (i < vm->bp)		__bp += _dlen;
 	}
 
+	// Last element
+	if (vm->__AR[j++] == end && ++__sp)
+		sprintf(__ptrs + _len++, "|");
+	sprintf(__ptrs + _len, " %d", vm->stack[end]);
 	
 	// Get number of digits
 	_digits = numDigits(vm->stack[end]);
 
-	// Last element
-	if (vm->__AR[j++] == end && ++__sp)
-	{
-		sprintf(__ptrs + _i, "|");
-
-		// Increment SP & BP buffers
-		if (i < vm->sp)
-			__sp++;
-		if (i <= vm->bp)
-			__bp++;
-		_i++;
-	}
-
-	sprintf(__ptrs + _i, " %d\n", vm->stack[end]);
-	__ptrs[_i += _digits + 1] = '\0';
+	// Finalize stack string
+	_dlen = (_len += _digits + 1) - _len;
+	__ptrs[_len += _digits + 1] = '\0';
 
 	// Update SP & BP buffers
-	if (i < vm->sp)
-		__sp += _digits + 1;
-	if (i < vm->bp)
-		__bp += _digits + 1;
+	if (i < vm->bp) __bp += _dlen;
+	if (j > 1)		__bp++;
+	__sp += _dlen + 1;
 }
 
 // Prints the current instruction that
