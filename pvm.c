@@ -234,7 +234,7 @@ void printState(vm_t *vm)
 
 		// Get total distance until indicator
 		for (buf = i = 0; i < vm->__baseReg; i++)
-			buf += numDigits(vm->rf[i]) + 2;
+			buf += _numDigits(vm->rf[i]) + 2;
 			
 		for (i = 0; i < buf; i++)
 			printf(" ");
@@ -262,8 +262,6 @@ void printState(vm_t *vm)
 		printf("%s\n", __sp == __bp ? "`^" : "^");
 	}
 	else printf("\n\n");
-
-	// printf("\n\n");
 }
 
 // Prints the register file of a vm
@@ -293,7 +291,7 @@ void printStack(vm_t *vm)
 	sprintf(__ptrs + _len, "%d ", vm->stack[0]);
 
 	// Init SP & BP Indicator buffer
-	_digits = numDigits(vm->stack[0]);
+	_digits = _numDigits(vm->stack[0]);
 	__bp = __sp += 2 + _digits;
 	_dlen = _len += _digits + 1;
 
@@ -306,7 +304,7 @@ void printStack(vm_t *vm)
 			resizeIndicator();
 
 		// Get number of digits
-		_digits = numDigits(vm->stack[i]);
+		_digits = _numDigits(vm->stack[i]);
 		
 		// Print AR seperator (& increment _len)
 		if (vm->__AR[j] && vm->__AR[j] == i && ++j)
@@ -327,7 +325,7 @@ void printStack(vm_t *vm)
 	sprintf(__ptrs + _len, " %d", vm->stack[end]);
 	
 	// Get number of digits
-	_digits = numDigits(vm->stack[end]);
+	_digits = _numDigits(vm->stack[end]);
 
 	// Finalize stack string
 	_dlen = (_len += _digits + 1) - _len;
@@ -476,19 +474,10 @@ int executeOp(vm_t *vm, int vmFlag)
 	// Adjust base reg dynamically
 	r += vm->__baseReg;
 	
-	if (op == OP_NEG
-		|| op == OP_ADD
-		|| op == OP_SUB
-		|| op == OP_MUL
-		|| op == OP_DIV
-		|| op == OP_ODD
-		|| op == OP_MOD
-		|| op == OP_EQL
-		|| op == OP_NEQ
-		|| op == OP_LSS
-		|| op == OP_LEQ
-		|| op == OP_GTR
-		|| op == OP_GEQ)
+	if (op == OP_NEG || op == OP_ADD || op == OP_SUB || op == OP_MUL ||
+		op == OP_DIV || op == OP_ODD || op == OP_MOD || op == OP_EQL ||
+		op == OP_NEQ || op == OP_LSS || op == OP_LEQ || op == OP_GTR ||
+		op == OP_GEQ)
 	{
 		l += vm->__baseReg;
 		m += vm->__baseReg;
@@ -838,8 +827,9 @@ int main(int argc, char *argv[])
 					// "Supported Dircetives:"
 					// "-v			Prints VM State on each cycle to STDOUT
 					// "-a			Prints Decoded Machine Code Instructions to STDOUT
-					DIE("\nEXITED - Unkown Directive \"%s\"!\n\n%s\n%c%c\t\t%s\n%c%c\t\t%s\n", argv[i],
+					DIE("\nEXITED - Unkown Directive \"%s\"!\n\n%s\n%c%c\t\t%s\n%c%c\t\t%s\n%c%c\t\t%s\n", argv[i],
 						"Supported Dircetives:", FLAG, FLAG_VM, "Prints VM State on each cycle to STDOUT",
+						FLAG, FLAG_IDCTR, "Indicators for Base, Stack, and Register are printed along side each VM State cycle",
 						FLAG, FLAG_ASMBLY, "Prints Decoded Machine Code Instructions to STDOUT");
 					break;
 			}
@@ -881,11 +871,17 @@ int main(int argc, char *argv[])
 		initIndicator();
 		printf("\n");
 		printf("\nVM State Log:\n");
-		printf("-------------\n");
-		printf("\nBase Pointer (SP):       ^");
-		printf("\nStack Pointer (SP):      ;");
-		printf("\nRegister Pointer (RP):   ,");
-		printf("\n");
+		if (_indicator)
+		{
+			printf("------------------------\n");
+			printf("   BP, SP, RP Indicators\n");
+			printf("` - Base Pointer      BP\n");
+			printf("^ - Stack Pointer     SP\n");
+			printf(", - Register Pointer  RP\n");
+			printf("------------------------\n");
+		}
+		else printf("---------------\n");
+	
 		initialPrint(vm);
 	}
 
@@ -910,37 +906,3 @@ int main(int argc, char *argv[])
 	// Exit properly
 	return 0;
 }
-
-#pragma region "DEPRECATED"
-// // DEPRECATED // //
-// void run(instruction_t *code[], int printFlag)
-// {
-// 	vm_t *vm;
-// 	int halt;
-
-// 	if (!(vm = initVMWithCode(code)))
-// 		DIE("%s", "initialization failed (mem allocation)");
-
-// 	if (printFlag)
-// 	{
-// 		printDecodedInstructions(vm);
-// 		initialPrint(vm);
-// 	}
-
-// 	// Run virtual machine
-// 	do {
-// 		// Fetch Instruction
-// 		fetchOp(vm, printFlag);
-
-// 		// Execute
-// 		halt = executeOp(vm, printFlag);
-// 	} while (!halt);
-
-// 	// Check if exited prematurely
-// 	if (halt - 1)		printHaltReason(halt);
-// 	else if (printFlag)	printState(vm);
-
-// 	// Cleanup
-// 	destroyVM(vm);
-// }
-#pragma endregion

@@ -99,7 +99,7 @@ void initIndicator(void);
 void resizeIndicator(void);
 
 
-int numDigits(int n)
+int _numDigits(int n)
 {
 	return n ? floor(log10(abs(n))) + 1 + (n < 0) : 1;
 }
